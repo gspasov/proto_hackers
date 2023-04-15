@@ -1,0 +1,3 @@
+%{
+  "fun_server": {:hex, :fun_server, "0.1.4", "ce543da28a951b3beff893c9c36f2659b7a7b5e2955dba34f47b13f929288bda", [:mix], [], "hexpm", "1ab2865e0def3ee22f6529aad595d9ff6a2393a0a90c407b328e9c77992bcf7f"},
+}

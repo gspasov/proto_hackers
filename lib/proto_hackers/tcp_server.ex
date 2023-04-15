@@ -1,4 +1,4 @@
-defmodule Protohackers.TcpServer do
+defmodule ProtoHackers.TcpServer do
   use GenServer
 
   require Logger
@@ -26,7 +26,7 @@ defmodule Protohackers.TcpServer do
         )
 
         Task.Supervisor.start_child(
-          Protohackers.TaskSupervisor,
+          ProtoHackers.TaskSupervisor,
           __MODULE__,
           :handle_client,
           [client_connection_socket]

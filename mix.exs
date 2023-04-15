@@ -1,9 +1,9 @@
-defmodule Protohackers.MixProject do
+defmodule ProtoHackers.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :protohackers,
+      app: :proto_hackers,
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
@@ -14,7 +14,7 @@ defmodule Protohackers.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      mod: {Protohackers, []},
+      mod: {ProtoHackers, []},
       extra_applications: [:logger]
     ]
   end

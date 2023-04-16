@@ -38,11 +38,11 @@ defmodule ProtoHackers.PrimeTime do
           "[#{__MODULE__}] Successfully parsed request and returning response #{inspect(response)}"
         )
 
-        TcpServer.send(socket, response)
+        TcpServer.send(socket, "#{response}\n")
 
       {:error, reason} ->
         Logger.warn("[#{__MODULE__}] Failed to parse request or response with #{inspect(reason)}")
-        TcpServer.send(socket, 'malformed_request')
+        TcpServer.send(socket, "malformed_request\n")
     end
   end
 
@@ -59,9 +59,12 @@ defmodule ProtoHackers.PrimeTime do
   end
 
   @spec prime?(number :: integer()) :: boolean()
-  defp prime?(num) when num > 1 do
-    Enum.any?(2..trunc(:math.sqrt(num)), fn n -> rem(num, n) == 0 end)
+  def prime?(num) when num > 1 do
+    2..trunc(:math.sqrt(num))
+    |> Enum.to_list()
+    |> Kernel.--([num])
+    |> Enum.all?(fn n -> rem(num, n) != 0 end)
   end
 
-  defp prime?(_), do: false
+  def prime?(_), do: false
 end

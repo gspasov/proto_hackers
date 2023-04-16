@@ -22,7 +22,9 @@ defmodule ProtoHackers.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:fun_server, "~> 0.1.4"}
+      {:fun_server, "~> 0.1.4"},
+      {:warm_fuzzy_thing, "~> 0.1.0"},
+      {:jason, "~> 1.4"}
     ]
   end
 end

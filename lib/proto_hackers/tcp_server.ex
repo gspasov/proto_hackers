@@ -9,13 +9,21 @@ defmodule ProtoHackers.TcpServer do
       }) do
     FunServer.start_link(__MODULE__, gen_options, fn ->
       {:ok, socket} = :gen_tcp.listen(tcp_port, tcp_options)
-      Logger.debug("[#{__MODULE__}] listening on #{inspect(socket)}")
+
+      Logger.debug(
+        "[#{__MODULE__}] starting tcp for #{inspect(Keyword.get(gen_options, :name, "No name provided to server"))} listening on #{inspect(socket)}"
+      )
+
       state = %{socket: socket, client_connections: []}
       {:ok, state, {:continue, accept_connection(packet_handler)}}
     end)
   end
 
-  def accept_connection(packet_handler) do
+  def send(socket, packet) do
+    :gen_tcp.send(socket, packet)
+  end
+
+  defp accept_connection(packet_handler) do
     fn %{socket: socket, client_connections: client_connections} = state ->
       case :gen_tcp.accept(socket) do
         {:ok, client_connection_socket} ->
@@ -23,9 +31,12 @@ defmodule ProtoHackers.TcpServer do
             "[#{__MODULE__}] `:gen_tcp.accept/1` established connection on #{inspect(client_connection_socket)}"
           )
 
-          Task.Supervisor.start_child(ProtoHackers.TaskSupervisor, fn ->
-            handle_client(client_connection_socket, packet_handler)
-          end)
+          Task.Supervisor.start_child(
+            ProtoHackers.TaskSupervisor,
+            __MODULE__,
+            :handle_client,
+            [client_connection_socket, packet_handler]
+          )
 
           new_state = %{
             state

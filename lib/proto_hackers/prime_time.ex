@@ -50,8 +50,8 @@ defmodule ProtoHackers.PrimeTime do
     %{method: "isPrime", prime: prime?}
   end
 
-  defp validate_request(%{"method" => "isPrime", "number" => number}) when is_integer(number) do
-    {:ok, number}
+  defp validate_request(%{"method" => "isPrime", "number" => number}) when is_number(number) do
+    {:ok, trunc(number)}
   end
 
   defp validate_request(_) do

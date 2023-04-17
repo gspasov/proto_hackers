@@ -1,14 +1,15 @@
 defmodule ProtoHackers do
   use Application
 
-  alias ProtoHackers.SmokeTest
+  alias ProtoHackers.TcpServer
   alias ProtoHackers.PrimeTime
 
   @impl true
   def start(_type, _args) do
     children = [
-      SmokeTest.spec(port: 4001),
-      PrimeTime.spec(port: 4002),
+      TcpServer.SmokeTest.spec(port: 4000),
+      PrimeTime,
+      TcpServer.PrimeTime.spec(port: 4001),
       {Task.Supervisor, name: ProtoHackers.TaskSupervisor, strategy: :one_for_one}
     ]
 

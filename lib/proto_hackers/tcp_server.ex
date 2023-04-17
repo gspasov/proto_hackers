@@ -14,51 +14,44 @@ defmodule ProtoHackers.TcpServer do
         "[#{__MODULE__}] starting tcp for #{inspect(Keyword.get(gen_options, :name, "No name provided to server"))} listening on #{inspect(socket)}"
       )
 
-      state = %{socket: socket, client_connections: []}
-      {:ok, state, {:continue, accept_connection(packet_handler)}}
+      state = %{socket: socket, packet_handler: packet_handler}
+      {:ok, state, {:continue, &accept_connection/1}}
     end)
   end
 
-  def send(socket, packet) do
+  def tcp_send(socket, packet) do
     :gen_tcp.send(socket, packet)
   end
 
-  defp accept_connection(packet_handler) do
-    fn %{socket: socket, client_connections: client_connections} = state ->
-      case :gen_tcp.accept(socket) do
-        {:ok, client_connection_socket} ->
-          Logger.info(
-            "[#{__MODULE__}] `:gen_tcp.accept/1` established connection on #{inspect(client_connection_socket)}"
-          )
+  defp accept_connection(%{socket: socket, packet_handler: packet_handler} = state) do
+    case :gen_tcp.accept(socket) do
+      {:ok, client_connection_socket} ->
+        Logger.info(
+          "[#{__MODULE__}] `:gen_tcp.accept/1` established connection on #{inspect(client_connection_socket)}"
+        )
 
-          Task.Supervisor.start_child(
-            ProtoHackers.TaskSupervisor,
-            __MODULE__,
-            :handle_client,
-            [client_connection_socket, packet_handler]
-          )
+        Task.Supervisor.start_child(
+          ProtoHackers.TaskSupervisor,
+          __MODULE__,
+          :handle_client,
+          [client_connection_socket, packet_handler]
+        )
 
-          new_state = %{
-            state
-            | client_connections: [client_connection_socket | client_connections]
-          }
+        {:noreply, state, {:continue, &accept_connection/1}}
 
-          {:noreply, new_state, {:continue, accept_connection(packet_handler)}}
+      {:error, :timeout} ->
+        Logger.debug("[#{__MODULE__}] `:gen_tcp.accept/1` got :timeout")
+        {:noreply, state, {:continue, &accept_connection/1}}
 
-        {:error, :timeout} ->
-          Logger.debug("[#{__MODULE__}] `:gen_tcp.accept/1` got :timeout")
-          {:noreply, state, {:continue, accept_connection(packet_handler)}}
+      {:error, :closed} ->
+        Logger.warn("[#{__MODULE__}] `:gen_tcp.accept/1` was closed normally")
+        :gen_tcp.close(socket)
+        {:noreply, state}
 
-        {:error, :closed} ->
-          Logger.warn("[#{__MODULE__}] `:gen_tcp.accept/1` was closed normally")
-          :gen_tcp.close(socket)
-          {:noreply, state}
-
-        {:error, reason} ->
-          Logger.error("[#{__MODULE__}] `:gen_tcp.accept/1` failed with #{inspect(reason)}")
-          :gen_tcp.close(socket)
-          {:noreply, state}
-      end
+      {:error, reason} ->
+        Logger.error("[#{__MODULE__}] `:gen_tcp.accept/1` failed with #{inspect(reason)}")
+        :gen_tcp.close(socket)
+        {:noreply, state}
     end
   end
 
@@ -66,7 +59,7 @@ defmodule ProtoHackers.TcpServer do
     case :gen_tcp.recv(socket, 0) do
       {:ok, packet} ->
         Logger.debug(
-          "[#{__MODULE__}] Connection #{inspect(socket)} received packet #{inspect(packet)}"
+          "[#{__MODULE__}] Connection #{inspect(socket)} received packet #{inspect(packet, limit: :infinity)}"
         )
 
         handler.(socket, packet)

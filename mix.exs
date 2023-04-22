@@ -7,7 +7,14 @@ defmodule ProtoHackers.MixProject do
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      releases: [
+        proto: [
+          version: "0.0.1",
+          application: [proto_hackers: :permanent],
+          steps: [:assemble, :tar]
+        ]
+      ]
     ]
   end
 

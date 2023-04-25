@@ -39,6 +39,7 @@ defmodule ProtoHackers.MeansToAnEnd do
 
       {:error, :invalid_request} ->
         Logger.warn("[#{__MODULE__}] Invalid request")
+        TcpServer.tcp_send(socket, "bad_request")
     end
   end
 

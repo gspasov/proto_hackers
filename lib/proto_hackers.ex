@@ -7,10 +7,13 @@ defmodule ProtoHackers do
   @impl true
   def start(_type, _args) do
     children = [
-      TcpServer.SmokeTest.spec(port: 4000),
+      {Task.Supervisor, name: ProtoHackers.TaskSupervisor, strategy: :one_for_one},
+      TcpServer.SmokeTest.spec(port: 4010),
       PrimeTime,
-      TcpServer.PrimeTime.spec(port: 4001),
-      {Task.Supervisor, name: ProtoHackers.TaskSupervisor, strategy: :one_for_one}
+      TcpServer.PrimeTime.spec(port: 4020),
+      {Registry, keys: :unique, name: Registry.MeansToAnEnd},
+      {DynamicSupervisor, name: ProtoHackers.DynamicSupervisor, strategy: :one_for_one},
+      TcpServer.MeansToAnEnd.spec(port: 4030)
     ]
 
     opts = [strategy: :one_for_one, name: ProtoHackers.Supervisor]

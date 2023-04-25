@@ -10,9 +10,9 @@ defmodule ProtoHackers.TcpServer.SmokeTest do
          [
            %{
              tcp: %{
-               port: Keyword.get(opts, :port, 4000),
+               port: Keyword.fetch!(opts, :port),
                options: [{:mode, :binary}, {:active, false}, {:packet, 0}],
-               packet_handler: &SmokeTest.packet_handler/2
+               on_receive_callback: &SmokeTest.on_receive_callback/2
              },
              server: %{
                options: [name: __MODULE__]

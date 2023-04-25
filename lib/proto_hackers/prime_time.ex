@@ -9,7 +9,7 @@ defmodule ProtoHackers.PrimeTime do
     FunServer.start_link(__MODULE__, [name: __MODULE__], fn -> {:ok, %{packet_part: ""}} end)
   end
 
-  def packet_handler(socket, packet) do
+  def on_receive_callback(socket, packet) do
     FunServer.async(__MODULE__, fn state ->
       new_state = Map.update(state, :packet_portion, packet, fn prev -> prev <> packet end)
 

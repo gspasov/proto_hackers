@@ -1,5 +1,6 @@
 %{
   "fun_server": {:hex, :fun_server, "0.1.4", "ce543da28a951b3beff893c9c36f2659b7a7b5e2955dba34f47b13f929288bda", [:mix], [], "hexpm", "1ab2865e0def3ee22f6529aad595d9ff6a2393a0a90c407b328e9c77992bcf7f"},
   "jason": {:hex, :jason, "1.4.0", "e855647bc964a44e2f67df589ccf49105ae039d4179db7f6271dfd3843dc27e6", [:mix], [{:decimal, "~> 1.0 or ~> 2.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "79a3791085b2a0f743ca04cec0f7be26443738779d09302e01318f97bdb82121"},
+  "typed_struct": {:hex, :typed_struct, "0.3.0", "939789e3c1dca39d7170c87f729127469d1315dcf99fee8e152bb774b17e7ff7", [:mix], [], "hexpm", "c50bd5c3a61fe4e198a8504f939be3d3c85903b382bde4865579bc23111d1b6d"},
   "warm_fuzzy_thing": {:hex, :warm_fuzzy_thing, "0.1.0", "a561acbfd34892e032ad049da30db26c15f3f1f58a7417499d6620c0c206b337", [:mix], [], "hexpm", "f38e765b96d395c0e396248008f19a1c28aa0263a2321018c8041689881766ad"},
 }

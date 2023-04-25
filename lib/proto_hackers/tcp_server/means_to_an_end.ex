@@ -1,6 +1,6 @@
-defmodule ProtoHackers.TcpServer.PrimeTime do
+defmodule ProtoHackers.TcpServer.MeansToAnEnd do
   alias ProtoHackers.TcpServer
-  alias ProtoHackers.PrimeTime
+  alias ProtoHackers.MeansToAnEnd
 
   def spec(opts) do
     %{
@@ -11,8 +11,9 @@ defmodule ProtoHackers.TcpServer.PrimeTime do
            %{
              tcp: %{
                port: Keyword.fetch!(opts, :port),
-               options: [{:mode, :binary}, {:active, false}, {:packet, :line}],
-               on_receive_callback: &PrimeTime.on_receive_callback/2
+               options: [{:mode, :binary}, {:active, false}, {:packet, 0}],
+               on_receive_callback: &MeansToAnEnd.on_receive_callback/2,
+               on_close_callback: &MeansToAnEnd.on_close_callback/1
              },
              server: %{
                options: [name: __MODULE__]

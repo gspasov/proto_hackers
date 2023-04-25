@@ -31,7 +31,8 @@ defmodule ProtoHackers.MixProject do
     [
       {:fun_server, "~> 0.1.4"},
       {:warm_fuzzy_thing, "~> 0.1.0"},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:typed_struct, "~> 0.3.0"}
     ]
   end
 end

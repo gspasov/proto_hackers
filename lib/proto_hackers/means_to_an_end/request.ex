@@ -1,5 +1,5 @@
 defmodule ProtoHackers.MeansToAnEnd.Request do
-  @defmodule """
+  @moduledoc """
   Represents a single request
   """
 

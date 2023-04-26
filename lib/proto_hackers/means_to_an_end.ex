@@ -29,12 +29,13 @@ defmodule ProtoHackers.MeansToAnEnd do
 
     case Request.parse(packet) do
       {:ok, %Request.Insert{timestamp: timestamp, price: price}} ->
-        Logger.debug("[#{__MODULE__}] INSERT request")
+        Logger.debug("[#{__MODULE__}] INSERT request with price #{inspect(price)}")
         insert(session_pid, timestamp, price)
 
       {:ok, %Request.Query{min_timestamp: min_timestamp, max_timestamp: max_timestamp}} ->
         Logger.debug("[#{__MODULE__}] QUERY request")
         average = query(session_pid, min_timestamp, max_timestamp)
+        Logger.debug("[#{__MODULE__}] Average is #{inspect(average)}")
         TcpServer.tcp_send(socket, to_string(average))
 
       {:error, :invalid_request} ->

@@ -23,11 +23,11 @@ defmodule ProtoHackers.MeansToAnEnd.Request do
   @spec parse(<<_::72>>) :: Either.t(:invalid_request, Request.t())
   def parse(binary)
 
-  def parse(<<?Q, min_timestamp::integer-size(32), max_timestamp::integer-size(32)>>) do
+  def parse(<<?Q, min_timestamp::big-signed-integer-32, max_timestamp::big-signed-integer-32>>) do
     {:ok, %Request.Query{max_timestamp: max_timestamp, min_timestamp: min_timestamp}}
   end
 
-  def parse(<<?I, timestamp::integer-size(32), price::integer-size(32)>>) do
+  def parse(<<?I, timestamp::big-signed-integer-32, price::big-signed-integer-32>>) do
     {:ok, %Request.Insert{timestamp: timestamp, price: price}}
   end
 

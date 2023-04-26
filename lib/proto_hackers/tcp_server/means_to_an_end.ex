@@ -11,6 +11,7 @@ defmodule ProtoHackers.TcpServer.MeansToAnEnd do
            %{
              tcp: %{
                port: Keyword.fetch!(opts, :port),
+               recv_length: 9,
                options: [{:mode, :binary}, {:active, false}, {:packet, 0}],
                on_receive_callback: &MeansToAnEnd.on_receive_callback/2,
                on_close_callback: &MeansToAnEnd.on_close_callback/1

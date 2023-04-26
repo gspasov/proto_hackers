@@ -20,11 +20,13 @@ defmodule ProtoHackers.TcpServer do
       )
 
       on_close_callback = Map.get(tcp_specs, :on_close_callback, fn v -> v end)
+      length = Map.get(tcp_specs, :length, 0)
 
       state = %{
         socket: socket,
         on_receive_callback: on_receive_callback,
-        on_close_callback: on_close_callback
+        on_close_callback: on_close_callback,
+        length: length
       }
 
       {:ok, state, {:continue, &accept_connection/1}}
@@ -39,7 +41,8 @@ defmodule ProtoHackers.TcpServer do
          %{
            socket: socket,
            on_receive_callback: on_receive_callback,
-           on_close_callback: on_close_callback
+           on_close_callback: on_close_callback,
+           length: length
          } = state
        ) do
     case :gen_tcp.accept(socket) do
@@ -52,7 +55,7 @@ defmodule ProtoHackers.TcpServer do
           ProtoHackers.TaskSupervisor,
           __MODULE__,
           :handle_client,
-          [client_connection_socket, on_receive_callback, on_close_callback]
+          [client_connection_socket, length, on_receive_callback, on_close_callback]
         )
 
         {:noreply, state, {:continue, &accept_connection/1}}
@@ -73,19 +76,19 @@ defmodule ProtoHackers.TcpServer do
     end
   end
 
-  def handle_client(socket, on_receive_callback, on_close_callback) do
-    case :gen_tcp.recv(socket, 0) do
+  def handle_client(socket, length, on_receive_callback, on_close_callback) do
+    case :gen_tcp.recv(socket, length) do
       {:ok, packet} ->
         Logger.debug(
           "[#{__MODULE__}] Connection #{inspect(socket)} received packet #{inspect(packet, limit: :infinity)}"
         )
 
         on_receive_callback.(socket, packet)
-        handle_client(socket, on_receive_callback, on_close_callback)
+        handle_client(socket, length, on_receive_callback, on_close_callback)
 
       {:error, :timeout} ->
         Logger.debug("[#{__MODULE__}] Connection #{inspect(socket)} timed out")
-        handle_client(socket, on_receive_callback, on_close_callback)
+        handle_client(socket, length, on_receive_callback, on_close_callback)
 
       {:error, :closed} ->
         Logger.warn("[#{__MODULE__}] Connection #{inspect(socket)} was closed normally")

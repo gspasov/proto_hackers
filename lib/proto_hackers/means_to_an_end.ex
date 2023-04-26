@@ -102,7 +102,7 @@ defmodule ProtoHackers.MeansToAnEnd do
                     end
 
                   Logger.debug("[#{__MODULE__}] Average is #{inspect(average)}")
-                  TcpServer.tcp_send(tcp_socket, to_string(average))
+                  TcpServer.tcp_send(tcp_socket, <<average::big-signed-integer-32>>)
                   price_data
 
                 {:error, :invalid_request} ->

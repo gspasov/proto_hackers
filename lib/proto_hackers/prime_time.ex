@@ -1,8 +1,11 @@
 defmodule ProtoHackers.PrimeTime do
+  @moduledoc false
+
   use FunServer
   require Logger
 
   alias ProtoHackers.TcpServer
+  alias ProtoHackers.Utils
   alias WarmFuzzyThing.Either
 
   def start_link(_args) do
@@ -30,7 +33,7 @@ defmodule ProtoHackers.PrimeTime do
     |> String.replace("\n", "")
     |> Jason.decode()
     |> Either.bind(&validate_request/1)
-    |> Either.fmap(&prime?/1)
+    |> Either.fmap(&Utils.prime?/1)
     |> Either.fmap(&build_response/1)
     |> Either.bind(&Jason.encode/1)
     |> case do
@@ -58,18 +61,5 @@ defmodule ProtoHackers.PrimeTime do
 
   defp validate_request(_) do
     {:error, :malformed_request}
-  end
-
-  @spec prime?(number :: integer()) :: boolean()
-  def prime?(num)
-
-  def prime?(num) when num <= 1, do: false
-  def prime?(num) when num in [2, 3], do: true
-  def prime?(num) when rem(num, 2) == 0 or rem(num, 3) == 0, do: false
-
-  def prime?(num) do
-    not Enum.any?(5..trunc(:math.sqrt(num))//6, fn n ->
-      rem(num, n) == 0 or rem(num, n + 2) == 0
-    end)
   end
 end

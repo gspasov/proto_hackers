@@ -1,5 +1,5 @@
 defmodule ProtoHackers.SmokeTest do
-  require Logger
+  @moduledoc false
 
   alias ProtoHackers.TcpServer
 

@@ -7,8 +7,6 @@ defmodule ProtoHackers.MeansToAnEnd.Request do
 
   alias ProtoHackers.MeansToAnEnd.Request
 
-  @type t :: Insert.t() | Query.t()
-
   typedstruct module: Insert, enforce: true do
     field :timestamp, :integer
     field :price, :integer
@@ -18,6 +16,8 @@ defmodule ProtoHackers.MeansToAnEnd.Request do
     field :max_timestamp, :integer
     field :min_timestamp, :integer
   end
+
+  @type t :: Insert.t() | Query.t()
 
   @spec parse(<<_::72>>) :: Request.t()
   def parse(binary)

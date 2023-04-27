@@ -1,8 +1,11 @@
 defmodule ProtoHackers.MeansToAnEnd do
+  @moduledoc false
+
   use FunServer, restart: :transient
 
-  alias ProtoHackers.TcpServer
   alias ProtoHackers.MeansToAnEnd.Request
+  alias ProtoHackers.TcpServer
+  alias ProtoHackers.Utils
 
   require Logger
 
@@ -64,7 +67,7 @@ defmodule ProtoHackers.MeansToAnEnd do
     Logger.debug("[#{__MODULE__}] Handling INSERT #{inspect(request)}")
 
     FunServer.async(session, fn state ->
-      new_state = Map.update(state, timestamp, price, &id/1)
+      new_state = Map.update(state, timestamp, price, &Utils.id/1)
       {:noreply, new_state}
     end)
   end
@@ -124,7 +127,4 @@ defmodule ProtoHackers.MeansToAnEnd do
       [{pid, _}] -> {:ok, pid}
     end
   end
-
-  @spec id(value) :: value when value: any()
-  defp id(v), do: v
 end

@@ -1,16 +1,25 @@
 defmodule ProtoHackers.TcpServer do
+  @moduledoc """
+  General TCP Server used to handle all tasks.
+  Each task is supposed to start it's own TCP server with the specified specs.
+  """
+
   use FunServer
+
+  alias ProtoHackers.Utils
+  alias ProtoHackers.TcpServer.Specification
 
   require Logger
 
-  def start_link(%{
+  def start_link(%Specification{
         tcp:
-          %{
+          %Specification.Tcp{
             port: tcp_port,
             options: tcp_options,
+            task_supervisor: task_supervisor,
             on_receive_callback: on_receive_callback
           } = tcp_specs,
-        server: %{options: gen_options}
+        server: %Specification.Server{options: gen_options}
       }) do
     FunServer.start_link(__MODULE__, gen_options, fn ->
       {:ok, socket} = :gen_tcp.listen(tcp_port, tcp_options)
@@ -19,17 +28,20 @@ defmodule ProtoHackers.TcpServer do
         "[#{__MODULE__}] starting tcp for #{inspect(Keyword.get(gen_options, :name, "No name provided to server"))} listening on #{inspect(socket)}"
       )
 
-      on_close_callback = Map.get(tcp_specs, :on_close_callback, fn v -> v end)
+      on_close_callback = Map.get(tcp_specs, :on_close_callback, &Utils.id/1)
+      on_connect_callback = Map.get(tcp_specs, :on_connect_callback, &Utils.id/1)
       recv_length = Map.get(tcp_specs, :recv_length, 0)
 
-      state = %{
+      init_state = %{
         socket: socket,
         on_receive_callback: on_receive_callback,
         on_close_callback: on_close_callback,
-        recv_length: recv_length
+        on_connect_callback: on_connect_callback,
+        recv_length: recv_length,
+        task_supervisor: task_supervisor
       }
 
-      {:ok, state, {:continue, &accept_connection/1}}
+      {:ok, init_state, {:continue, &accept_connection/1}}
     end)
   end
 
@@ -43,7 +55,9 @@ defmodule ProtoHackers.TcpServer do
            socket: socket,
            on_receive_callback: on_receive_callback,
            on_close_callback: on_close_callback,
-           recv_length: recv_length
+           on_connect_callback: on_connect_callback,
+           recv_length: recv_length,
+           task_supervisor: task_supervisor
          } = state
        ) do
     case :gen_tcp.accept(socket) do
@@ -52,11 +66,20 @@ defmodule ProtoHackers.TcpServer do
           "[#{__MODULE__}] `:gen_tcp.accept/1` established connection on #{inspect(client_connection_socket)}"
         )
 
+        on_connect_callback.(client_connection_socket)
+
         Task.Supervisor.start_child(
-          ProtoHackers.TaskSupervisor,
+          task_supervisor,
           __MODULE__,
           :handle_client,
-          [client_connection_socket, recv_length, on_receive_callback, on_close_callback]
+          [
+            %{
+              socket: client_connection_socket,
+              recv_length: recv_length,
+              on_receive_callback: on_receive_callback,
+              on_close_callback: on_close_callback
+            }
+          ]
         )
 
         {:noreply, state, {:continue, &accept_connection/1}}
@@ -77,7 +100,14 @@ defmodule ProtoHackers.TcpServer do
     end
   end
 
-  def handle_client(socket, recv_length, on_receive_callback, on_close_callback) do
+  def handle_client(
+        %{
+          socket: socket,
+          recv_length: recv_length,
+          on_receive_callback: on_receive_callback,
+          on_close_callback: on_close_callback
+        } = args
+      ) do
     case :gen_tcp.recv(socket, recv_length) do
       {:ok, packet} ->
         Logger.debug(
@@ -85,11 +115,12 @@ defmodule ProtoHackers.TcpServer do
         )
 
         on_receive_callback.(socket, packet)
-        handle_client(socket, recv_length, on_receive_callback, on_close_callback)
+        handle_client(args)
 
       {:error, :timeout} ->
         Logger.debug("[#{__MODULE__}] Connection #{inspect(socket)} timed out")
-        handle_client(socket, recv_length, on_receive_callback, on_close_callback)
+
+        handle_client(args)
 
       {:error, :closed} ->
         Logger.warn("[#{__MODULE__}] Connection #{inspect(socket)} was closed normally")

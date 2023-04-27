@@ -21,7 +21,7 @@ defmodule ProtoHackers.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      mod: {ProtoHackers, []},
+      mod: {ProtoHackers.Application, []},
       extra_applications: [:logger]
     ]
   end
@@ -32,7 +32,9 @@ defmodule ProtoHackers.MixProject do
       {:fun_server, "~> 0.1.4"},
       {:warm_fuzzy_thing, "~> 0.1.0"},
       {:jason, "~> 1.4"},
-      {:typed_struct, "~> 0.3.0"}
+      {:typed_struct, "~> 0.3.0"},
+      {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
+      {:credo, "~> 1.7", only: [:dev], runtime: false}
     ]
   end
 end

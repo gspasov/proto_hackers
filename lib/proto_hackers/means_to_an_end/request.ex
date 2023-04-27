@@ -6,7 +6,6 @@ defmodule ProtoHackers.MeansToAnEnd.Request do
   use TypedStruct
 
   alias ProtoHackers.MeansToAnEnd.Request
-  alias WarmFuzzyThing.Either
 
   @type t :: Insert.t() | Query.t()
 
@@ -20,18 +19,14 @@ defmodule ProtoHackers.MeansToAnEnd.Request do
     field :min_timestamp, :integer
   end
 
-  @spec parse(<<_::72>>) :: Either.t(:invalid_request, Request.t())
+  @spec parse(<<_::72>>) :: Request.t()
   def parse(binary)
 
   def parse(<<?Q, min_timestamp::big-signed-integer-32, max_timestamp::big-signed-integer-32>>) do
-    {:ok, %Request.Query{max_timestamp: max_timestamp, min_timestamp: min_timestamp}}
+    %Request.Query{max_timestamp: max_timestamp, min_timestamp: min_timestamp}
   end
 
   def parse(<<?I, timestamp::big-signed-integer-32, price::big-signed-integer-32>>) do
-    {:ok, %Request.Insert{timestamp: timestamp, price: price}}
-  end
-
-  def parse(_invalid_request) do
-    {:error, :invalid_request}
+    %Request.Insert{timestamp: timestamp, price: price}
   end
 end

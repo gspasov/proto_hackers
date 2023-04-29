@@ -11,6 +11,7 @@ defmodule ProtoHackers.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      pg_spec(),
       {SmokeTest.Supervisor, 5010},
       {PrimeTime.Supervisor, 5020},
       {MeansToAnEnd.Supervisor, 5030},
@@ -19,5 +20,12 @@ defmodule ProtoHackers.Application do
 
     opts = [strategy: :one_for_one, name: ProtoHackers.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp pg_spec do
+    %{
+      id: :pg,
+      start: {:pg, :start_link, []}
+    }
   end
 end

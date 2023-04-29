@@ -25,7 +25,7 @@ defmodule ProtoHackers.MeansToAnEnd do
       case maybe_session_pid(socket) do
         nil ->
           {:ok, pid} =
-            DynamicSupervisor.start_child(ProtoHackers.DynamicSupervisor, {__MODULE__, socket})
+            DynamicSupervisor.start_child(DynamicSupervisor.MeansToAnEnd, {__MODULE__, socket})
 
           pid
 

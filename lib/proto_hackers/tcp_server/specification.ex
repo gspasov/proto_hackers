@@ -24,6 +24,6 @@ defmodule ProtoHackers.TcpServer.Specification do
     field :server, Server.t()
   end
 
-  @spec callback(:get_tcp.socket()) :: :ok
+  @spec callback(:gen_tcp.socket()) :: :ok
   def callback(_), do: :ok
 end

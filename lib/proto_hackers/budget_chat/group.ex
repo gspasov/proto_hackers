@@ -1,4 +1,8 @@
 defmodule ProtoHackers.BudgetChat.Group do
+  @moduledoc """
+  Stores all the participants in a BudgetChat Room
+  """
+
   use FunServer
 
   def start_link(_args) do

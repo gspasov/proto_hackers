@@ -1,4 +1,6 @@
 defmodule ProtoHackers.BudgetChat.MessageBuilder do
+  @moduledoc false
+
   @spec welcome() :: String.t()
   def welcome, do: "Welcome to budget chat! What shall I call you?\n"
 

@@ -1,4 +1,6 @@
 defmodule ProtoHackers.BudgetChat do
+  @moduledoc false
+
   use FunServer, restart: :transient
   use TypedStruct
 

@@ -1,4 +1,9 @@
 defmodule ProtoHackers.BudgetChat.Bus do
+  @moduledoc """
+  Process group for subscribing and broadcasting messages.
+  Used for sending messages and join/leave notifications.
+  """
+
   use TypedStruct
 
   alias ProtoHackers.BudgetChat.Bus.Message

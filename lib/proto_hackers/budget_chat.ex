@@ -182,7 +182,7 @@ defmodule ProtoHackers.BudgetChat do
     |> if do
       :ok
     else
-      {:error, "Name should consist entirely of alphanumeric characters"}
+      {:error, "Name should consist entirely of alphanumeric characters got #{inspect(name)}"}
     end
   end
 

@@ -34,6 +34,7 @@ defmodule ProtoHackers.BudgetChat do
   def on_connect_callback(socket) do
     case DynamicSupervisor.start_child(dynamic_supervisor_name(), {__MODULE__, socket}) do
       {:ok, _} ->
+        Logger.debug("[#{__MODULE__}] Sending welcome message to #{inspect(socket)}")
         TcpServer.tcp_send(socket, MessageBuilder.welcome())
 
       {:error, reason} ->

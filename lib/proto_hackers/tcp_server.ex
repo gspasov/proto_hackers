@@ -7,18 +7,17 @@ defmodule ProtoHackers.TcpServer do
   use FunServer
   use TypedStruct
 
-  alias ProtoHackers.Utils
   alias ProtoHackers.TcpServer.Specification
   alias ProtoHackers.TcpServer.State
 
   require Logger
 
   typedstruct module: State, required: true do
-    field :socket, port()
+    field :socket, :gen_tcp.socket()
     field :task_supervisor, :atom
-    field :on_receive_callback, (port(), any() -> :ok)
-    field :on_connect_callback, (port() -> :ok)
-    field :on_close_callback, (port() -> :ok)
+    field :on_receive_callback, (:gen_tcp.socket(), any() -> :ok)
+    field :on_connect_callback, (:gen_tcp.socket() -> :ok)
+    field :on_close_callback, (:gen_tcp.socket() -> :ok)
     field :receive_length, non_neg_integer()
   end
 
@@ -72,12 +71,9 @@ defmodule ProtoHackers.TcpServer do
          } = state
        ) do
     case :gen_tcp.accept(socket) do
-      {:ok, client_connection_socket} ->
-        Logger.info(
-          "[#{__MODULE__}] `:gen_tcp.accept/1` established connection on #{inspect(client_connection_socket)}"
-        )
-
-        on_connect_callback.(client_connection_socket)
+      {:ok, connection_socket} ->
+        Logger.info("[#{__MODULE__}] Established connection on #{inspect(connection_socket)}")
+        on_connect_callback.(connection_socket)
 
         Task.Supervisor.start_child(
           task_supervisor,
@@ -85,7 +81,7 @@ defmodule ProtoHackers.TcpServer do
           :handle_client,
           [
             %{
-              socket: client_connection_socket,
+              socket: connection_socket,
               receive_length: receive_length,
               on_receive_callback: on_receive_callback,
               on_close_callback: on_close_callback

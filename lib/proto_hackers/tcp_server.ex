@@ -45,10 +45,8 @@ defmodule ProtoHackers.TcpServer do
     end)
   end
 
-  def tcp_send(socket, packet) do
-    tcp_send_response = :gen_tcp.send(socket, packet)
-    Logger.debug("[#{__MODULE__}] TCP response to send: #{inspect(tcp_send_response)}")
-  end
+  def tcp_send(socket, packet), do: :gen_tcp.send(socket, packet)
+  def tcp_close(socket), do: :gen_tcp.close(socket)
 
   defp accept_connection(
          %{

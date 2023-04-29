@@ -13,13 +13,13 @@ defmodule ProtoHackers.TcpServer do
 
   require Logger
 
-  typedstruct module: State do
-    field :socket, port(), required: true
-    field :task_supervisor, :atom, required: true
-    field :on_receive_callback, (port(), any() -> :ok), required: true
-    field :on_connect_callback, (port() -> :ok), default: &Utils.id/1
-    field :on_close_callback, (port() -> :ok), default: &Utils.id/1
-    field :receive_length, non_neg_integer(), default: 0
+  typedstruct module: State, required: true do
+    field :socket, port()
+    field :task_supervisor, :atom
+    field :on_receive_callback, (port(), any() -> :ok)
+    field :on_connect_callback, (port() -> :ok)
+    field :on_close_callback, (port() -> :ok)
+    field :receive_length, non_neg_integer()
   end
 
   def start_link(%Specification{

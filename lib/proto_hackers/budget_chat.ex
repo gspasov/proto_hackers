@@ -82,9 +82,13 @@ defmodule ProtoHackers.BudgetChat do
   end
 
   def handle_request(session, request) do
-    FunServer.async(session, fn
-      %State{status: :connected} -> set_name(session, request)
-      %State{status: :joined} -> send_message(session, request)
+    FunServer.async(session, fn %State{status: status} = state ->
+      case status do
+        :connected -> set_name(session, request)
+        :joined -> send_message(session, request)
+      end
+
+      {:noreply, state}
     end)
   end
 

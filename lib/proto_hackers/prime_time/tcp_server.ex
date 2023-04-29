@@ -1,9 +1,9 @@
-defmodule ProtoHackers.TcpServer.SmokeTest do
+defmodule ProtoHackers.PrimeTime.TcpServer do
   @moduledoc false
 
-  alias ProtoHackers.SmokeTest
   alias ProtoHackers.TcpServer
   alias ProtoHackers.TcpServer.Specification
+  alias ProtoHackers.PrimeTime
 
   def spec(opts) do
     %{
@@ -14,9 +14,9 @@ defmodule ProtoHackers.TcpServer.SmokeTest do
            %Specification{
              tcp: %Specification.Tcp{
                port: Keyword.fetch!(opts, :port),
-               task_supervisor: Keyword.fetch(opts, :task_supervisor),
-               options: [{:mode, :binary}, {:active, false}, {:packet, 0}],
-               on_receive_callback: &SmokeTest.on_receive_callback/2
+               task_supervisor: Keyword.fetch!(opts, :task_supervisor),
+               options: [{:mode, :binary}, {:active, false}, {:packet, :line}],
+               on_tcp_receive: &PrimeTime.on_tcp_receive/2
              },
              server: %Specification.Server{
                options: [name: __MODULE__]

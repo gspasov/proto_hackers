@@ -3,7 +3,7 @@ defmodule ProtoHackers.SmokeTest.Supervisor do
 
   use Supervisor
 
-  alias ProtoHackers.TcpServer
+  alias ProtoHackers.SmokeTest
 
   def start_link(port) do
     Supervisor.start_link(__MODULE__, port, name: __MODULE__)
@@ -14,7 +14,7 @@ defmodule ProtoHackers.SmokeTest.Supervisor do
 
     children = [
       {Task.Supervisor, name: task_supervisor, strategy: :one_for_one},
-      TcpServer.SmokeTest.spec(port: port, task_supervisor: task_supervisor)
+      SmokeTest.TcpServer.spec(port: port, task_supervisor: task_supervisor)
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

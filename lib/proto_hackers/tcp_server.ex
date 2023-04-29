@@ -15,9 +15,9 @@ defmodule ProtoHackers.TcpServer do
   typedstruct module: State, required: true do
     field :socket, :gen_tcp.socket()
     field :task_supervisor, :atom
-    field :on_receive_callback, (:gen_tcp.socket(), any() -> :ok)
-    field :on_connect_callback, (:gen_tcp.socket() -> :ok)
-    field :on_close_callback, (:gen_tcp.socket() -> :ok)
+    field :on_tcp_receive, Specification.on_tcp_receive()
+    field :on_tcp_connect, Specification.on_tcp_connect()
+    field :on_tcp_close, Specification.on_tcp_close()
     field :receive_length, non_neg_integer()
   end
 
@@ -27,9 +27,9 @@ defmodule ProtoHackers.TcpServer do
           options: tcp_options,
           task_supervisor: task_supervisor,
           receive_length: receive_length,
-          on_connect_callback: on_connect_callback,
-          on_receive_callback: on_receive_callback,
-          on_close_callback: on_close_callback
+          on_tcp_connect: on_tcp_connect,
+          on_tcp_receive: on_tcp_receive,
+          on_tcp_close: on_tcp_close
         },
         server: %Specification.Server{options: fun_options}
       }) do
@@ -44,9 +44,9 @@ defmodule ProtoHackers.TcpServer do
 
       init_state = %State{
         socket: socket,
-        on_receive_callback: on_receive_callback,
-        on_close_callback: on_close_callback,
-        on_connect_callback: on_connect_callback,
+        on_tcp_receive: on_tcp_receive,
+        on_tcp_close: on_tcp_close,
+        on_tcp_connect: on_tcp_connect,
         receive_length: receive_length,
         task_supervisor: task_supervisor
       }
@@ -57,15 +57,15 @@ defmodule ProtoHackers.TcpServer do
     end)
   end
 
-  def tcp_send(socket, packet), do: :gen_tcp.send(socket, packet)
-  def tcp_close(socket), do: :gen_tcp.close(socket)
+  def send(socket, packet), do: :gen_tcp.send(socket, packet)
+  def close(socket), do: :gen_tcp.close(socket)
 
   defp accept_connection(
          %State{
            socket: socket,
-           on_receive_callback: on_receive_callback,
-           on_close_callback: on_close_callback,
-           on_connect_callback: on_connect_callback,
+           on_tcp_connect: on_tcp_connect,
+           on_tcp_receive: on_tcp_receive,
+           on_tcp_close: on_tcp_close,
            receive_length: receive_length,
            task_supervisor: task_supervisor
          } = state
@@ -73,7 +73,7 @@ defmodule ProtoHackers.TcpServer do
     case :gen_tcp.accept(socket) do
       {:ok, connection_socket} ->
         Logger.info("[#{__MODULE__}] Established connection on #{inspect(connection_socket)}")
-        on_connect_callback.(connection_socket)
+        on_tcp_connect.(connection_socket)
 
         Task.Supervisor.start_child(
           task_supervisor,
@@ -83,8 +83,8 @@ defmodule ProtoHackers.TcpServer do
             %{
               socket: connection_socket,
               receive_length: receive_length,
-              on_receive_callback: on_receive_callback,
-              on_close_callback: on_close_callback
+              on_tcp_receive: on_tcp_receive,
+              on_tcp_close: on_tcp_close
             }
           ]
         )
@@ -111,8 +111,8 @@ defmodule ProtoHackers.TcpServer do
         %{
           socket: socket,
           receive_length: receive_length,
-          on_receive_callback: on_receive_callback,
-          on_close_callback: on_close_callback
+          on_tcp_receive: on_tcp_receive,
+          on_tcp_close: on_tcp_close
         } = args
       ) do
     case :gen_tcp.recv(socket, receive_length) do
@@ -121,7 +121,7 @@ defmodule ProtoHackers.TcpServer do
           "[#{__MODULE__}] Connection #{inspect(socket)} received packet #{inspect(packet, limit: :infinity)}"
         )
 
-        on_receive_callback.(socket, packet)
+        on_tcp_receive.(socket, packet)
         handle_client(args)
 
       {:error, :timeout} ->
@@ -133,7 +133,7 @@ defmodule ProtoHackers.TcpServer do
         Logger.warn("[#{__MODULE__}] Connection #{inspect(socket)} was closed normally")
 
         :gen_tcp.close(socket)
-        on_close_callback.(socket)
+        on_tcp_close.(socket)
 
       {:error, reason} ->
         Logger.error(
@@ -141,7 +141,7 @@ defmodule ProtoHackers.TcpServer do
         )
 
         :gen_tcp.close(socket)
-        on_close_callback.(socket)
+        on_tcp_close.(socket)
     end
   end
 end

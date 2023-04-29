@@ -10,6 +10,8 @@ defmodule ProtoHackers.BudgetChat do
   alias ProtoHackers.BudgetChat.State
   alias ProtoHackers.BudgetChat.Bus
 
+  @behaviour TcpServer.Behaviour
+
   require Logger
 
   typedstruct module: State do
@@ -33,27 +35,30 @@ defmodule ProtoHackers.BudgetChat do
     )
   end
 
-  def on_connect_callback(socket) do
+  @impl true
+  def on_tcp_connect(socket) do
     case DynamicSupervisor.start_child(dynamic_supervisor_name(), {__MODULE__, socket}) do
       {:ok, _} ->
         Logger.debug("[#{__MODULE__}] Sending welcome message to #{inspect(socket)}")
-        TcpServer.tcp_send(socket, MessageBuilder.welcome())
+        TcpServer.send(socket, MessageBuilder.welcome())
 
       {:error, reason} ->
         Logger.error(
           "[#{__MODULE__}] Stopping tcp socket #{inspect(socket)} with #{inspect(reason)}"
         )
 
-        TcpServer.tcp_close(socket)
+        TcpServer.close(socket)
     end
   end
 
-  def on_receive_callback(socket, packet) do
+  @impl true
+  def on_tcp_receive(socket, packet) do
     {:ok, pid} = maybe_session_pid(socket)
     handle_packet(pid, packet)
   end
 
-  def on_close_callback(socket) do
+  @impl true
+  def on_tcp_close(socket) do
     case maybe_session_pid(socket) do
       nil ->
         Logger.error("[#{__MODULE__}] Unable to find Session for socket #{inspect(socket)}")
@@ -103,7 +108,7 @@ defmodule ProtoHackers.BudgetChat do
             Bus.broadcast_join(name)
 
             usernames = Group.get_users()
-            TcpServer.tcp_send(tcp_socket, MessageBuilder.participants(usernames))
+            TcpServer.send(tcp_socket, MessageBuilder.participants(usernames))
             Group.join(name)
 
             %State{state | name: name, status: :joined}
@@ -113,7 +118,7 @@ defmodule ProtoHackers.BudgetChat do
               "[#{__MODULE__}] Stopping TCP socket #{inspect(tcp_socket)} with #{inspect(reason)}"
             )
 
-            TcpServer.tcp_close(tcp_socket)
+            TcpServer.close(tcp_socket)
             state
         end
 
@@ -165,7 +170,7 @@ defmodule ProtoHackers.BudgetChat do
           tcp_socket: tcp_socket
         } = state
       ) do
-    TcpServer.tcp_send(tcp_socket, message)
+    TcpServer.send(tcp_socket, message)
     {:noreply, state}
   end
 

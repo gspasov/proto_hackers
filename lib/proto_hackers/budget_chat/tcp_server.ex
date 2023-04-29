@@ -16,9 +16,9 @@ defmodule ProtoHackers.BudgetChat.TcpServer do
                port: Keyword.fetch!(opts, :port),
                task_supervisor: Keyword.fetch!(opts, :task_supervisor),
                options: [mode: :binary, active: false, packet: :line],
-               on_receive_callback: &BudgetChat.on_receive_callback/2,
-               on_connect_callback: &BudgetChat.on_connect_callback/1,
-               on_close_callback: &BudgetChat.on_close_callback/1
+               on_tcp_receive: &BudgetChat.on_tcp_receive/2,
+               on_tcp_connect: &BudgetChat.on_tcp_connect/1,
+               on_tcp_close: &BudgetChat.on_tcp_close/1
              },
              server: %Specification.Server{
                options: [name: __MODULE__]

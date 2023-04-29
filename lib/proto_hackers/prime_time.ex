@@ -12,7 +12,7 @@ defmodule ProtoHackers.PrimeTime do
     FunServer.start_link(__MODULE__, [name: __MODULE__], fn -> {:ok, %{packet_part: ""}} end)
   end
 
-  def on_receive_callback(socket, packet) do
+  def on_tcp_receive(socket, packet) do
     FunServer.async(__MODULE__, fn state ->
       new_state = Map.update(state, :packet_portion, packet, fn prev -> prev <> packet end)
 
@@ -42,11 +42,11 @@ defmodule ProtoHackers.PrimeTime do
           "[#{__MODULE__}] Successfully parsed request and returning response #{inspect(response)}"
         )
 
-        TcpServer.tcp_send(socket, "#{response}\n")
+        TcpServer.send(socket, "#{response}\n")
 
       {:error, reason} ->
         Logger.warn("[#{__MODULE__}] Failed to parse request or response with #{inspect(reason)}")
-        TcpServer.tcp_send(socket, "malformed_request\n")
+        TcpServer.send(socket, "malformed_request\n")
     end
   end
 

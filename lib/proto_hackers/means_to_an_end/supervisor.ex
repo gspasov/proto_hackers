@@ -3,7 +3,7 @@ defmodule ProtoHackers.MeansToAnEnd.Supervisor do
 
   use Supervisor
 
-  alias ProtoHackers.TcpServer
+  alias ProtoHackers.MeansToAnEnd
 
   def start_link(port) do
     Supervisor.start_link(__MODULE__, port, name: __MODULE__)
@@ -16,7 +16,7 @@ defmodule ProtoHackers.MeansToAnEnd.Supervisor do
       {Task.Supervisor, name: task_supervisor, strategy: :one_for_one},
       {Registry, keys: :unique, name: Registry.MeansToAnEnd},
       {DynamicSupervisor, name: DynamicSupervisor.MeansToAnEnd, strategy: :one_for_one},
-      TcpServer.MeansToAnEnd.spec(port: port, task_supervisor: task_supervisor)
+      MeansToAnEnd.TcpServer.spec(port: port, task_supervisor: task_supervisor)
     ]
 
     Supervisor.init(children, strategy: :one_for_all)

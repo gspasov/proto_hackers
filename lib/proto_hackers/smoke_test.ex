@@ -3,7 +3,7 @@ defmodule ProtoHackers.SmokeTest do
 
   alias ProtoHackers.TcpServer
 
-  def on_receive_callback(socket, packet) do
-    TcpServer.tcp_send(socket, packet)
+  def on_tcp_receive(socket, packet) do
+    TcpServer.send(socket, packet)
   end
 end

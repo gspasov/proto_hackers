@@ -20,7 +20,7 @@ defmodule ProtoHackers.MeansToAnEnd do
     )
   end
 
-  def on_receive_callback(socket, packet) do
+  def on_tcp_receive(socket, packet) do
     session_pid =
       case maybe_session_pid(socket) do
         nil ->
@@ -36,7 +36,7 @@ defmodule ProtoHackers.MeansToAnEnd do
     handle_packet(session_pid, packet)
   end
 
-  def on_close_callback(socket) do
+  def on_tcp_close(socket) do
     case maybe_session_pid(socket) do
       nil ->
         Logger.error("[#{__MODULE__}] Unable to find FunServer for socket #{inspect(socket)}")
@@ -97,7 +97,7 @@ defmodule ProtoHackers.MeansToAnEnd do
         end
 
       Logger.debug("[#{__MODULE__}] Response for QUERY #{inspect(average)}")
-      TcpServer.tcp_send(tcp_socket, <<average::big-signed-integer-32>>)
+      TcpServer.send(tcp_socket, <<average::big-signed-integer-32>>)
 
       {:noreply, state}
     end)

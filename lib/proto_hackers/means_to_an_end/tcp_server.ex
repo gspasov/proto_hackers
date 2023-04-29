@@ -1,4 +1,4 @@
-defmodule ProtoHackers.TcpServer.MeansToAnEnd do
+defmodule ProtoHackers.MeansToAnEnd.TcpServer do
   @moduledoc false
 
   alias ProtoHackers.TcpServer
@@ -16,8 +16,8 @@ defmodule ProtoHackers.TcpServer.MeansToAnEnd do
                port: Keyword.fetch!(opts, :port),
                task_supervisor: Keyword.fetch!(opts, :task_supervisor),
                options: [{:mode, :binary}, {:active, false}, {:packet, 0}],
-               on_receive_callback: &MeansToAnEnd.on_receive_callback/2,
-               on_close_callback: &MeansToAnEnd.on_close_callback/1
+               on_tcp_receive: &MeansToAnEnd.on_tcp_receive/2,
+               on_tcp_close: &MeansToAnEnd.on_tcp_close/1
              },
              server: %Specification.Server{
                options: [name: __MODULE__]

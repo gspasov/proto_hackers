@@ -5,13 +5,17 @@ defmodule ProtoHackers.TcpServer.Specification do
 
   alias ProtoHackers.TcpServer.Specification
 
+  @type on_tcp_connect :: (:gen_tcp.socket() -> :ok)
+  @type on_tcp_receive :: (:gen_tcp.socket(), any() -> :ok)
+  @type on_tcp_close :: on_tcp_connect()
+
   typedstruct module: Tcp do
     field :port, non_neg_integer(), enforce: true
     field :options, [:inet.inet_backend() | :gen_tcp.listen_option()], enforce: true
     field :task_supervisor, atom(), enforce: true
-    field :on_receive_callback, (:gen_tcp.socket(), iodata() -> any), enforce: true
-    field :on_connect_callback, (:gen_tcp.socket() -> any), default: &Specification.callback/1
-    field :on_close_callback, (:gen_tcp.socket() -> any), default: &Specification.callback/1
+    field :on_tcp_receive, Specification.on_tcp_receive(), enforce: true
+    field :on_tcp_connect, Specification.on_tcp_connect(), default: &Specification.callback/1
+    field :on_tcp_close, Specification.on_tcp_close(), default: &Specification.callback/1
     field :receive_length, non_neg_integer(), default: 0
   end
 
@@ -24,6 +28,5 @@ defmodule ProtoHackers.TcpServer.Specification do
     field :server, Server.t()
   end
 
-  @spec callback(:gen_tcp.socket()) :: :ok
   def callback(_), do: :ok
 end

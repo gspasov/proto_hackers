@@ -1,5 +1,5 @@
 defmodule ProtoHackers.BudgetChat do
-  use FunServer
+  use FunServer, restart: :transient
   use TypedStruct
 
   alias ProtoHackers.BudgetChat.MessageBuilder

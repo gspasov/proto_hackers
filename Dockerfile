@@ -19,8 +19,9 @@ RUN mix compile
 # Setup a release
 RUN mix release --force
 
-EXPOSE 4010
-EXPOSE 4020
-EXPOSE 4030
+EXPOSE 5010
+EXPOSE 5020
+EXPOSE 5030
+EXPOSE 5030
 
 CMD ["_build/dev/rel/proto/bin/proto", "start_iex"]

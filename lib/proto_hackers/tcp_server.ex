@@ -17,19 +17,21 @@ defmodule ProtoHackers.TcpServer do
     field :socket, port(), required: true
     field :task_supervisor, :atom, required: true
     field :on_receive_callback, (port(), any() -> :ok), required: true
-    field :on_connect_callback, (port() -> :ok)
-    field :on_close_callback, (port() -> :ok)
-    field :receive_length, non_neg_integer()
+    field :on_connect_callback, (port() -> :ok), default: &Utils.id/1
+    field :on_close_callback, (port() -> :ok), default: &Utils.id/1
+    field :receive_length, non_neg_integer(), default: 0
   end
 
   def start_link(%Specification{
-        tcp:
-          %Specification.Tcp{
-            port: tcp_port,
-            options: tcp_options,
-            task_supervisor: task_supervisor,
-            on_receive_callback: on_receive_callback
-          } = tcp_specs,
+        tcp: %Specification.Tcp{
+          port: tcp_port,
+          options: tcp_options,
+          task_supervisor: task_supervisor,
+          receive_length: receive_length,
+          on_connect_callback: on_connect_callback,
+          on_receive_callback: on_receive_callback,
+          on_close_callback: on_close_callback
+        },
         server: %Specification.Server{options: fun_options}
       }) do
     FunServer.start_link(__MODULE__, fun_options, fn ->
@@ -40,10 +42,6 @@ defmodule ProtoHackers.TcpServer do
       Logger.debug(
         "[#{__MODULE__}] TCP for #{inspect(tcp_server_name)} listening on #{inspect(socket)}"
       )
-
-      on_close_callback = Map.get(tcp_specs, :on_close_callback, &Utils.id/1)
-      on_connect_callback = Map.get(tcp_specs, :on_connect_callback, &Utils.id/1)
-      receive_length = Map.get(tcp_specs, :receive_length, 0)
 
       init_state = %State{
         socket: socket,

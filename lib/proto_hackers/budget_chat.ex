@@ -12,9 +12,9 @@ defmodule ProtoHackers.BudgetChat do
 
   typedstruct module: State do
     field :status, :connected | :joined | :left, required: true
+    field :tcp_socket, :gen_tcp.socket(), required: true
     field :packet, String.t(), required: true
     field :name, String.t()
-    field :tcp_socket, port()
   end
 
   def dynamic_supervisor_name, do: DynamicSupervisor.BudgetChat
@@ -127,16 +127,18 @@ defmodule ProtoHackers.BudgetChat do
   end
 
   def leave(session) do
-    FunServer.async(session, fn
-      %State{status: :connected} = state ->
-        Logger.debug("[#{__MODULE__}] A User left without even joining the Chat")
-        {:stop, :normal, state}
+    FunServer.async(session, fn %State{status: status, name: name} = state ->
+      case status do
+        :connected ->
+          Logger.debug("[#{__MODULE__}] A User left without even joining the Chat")
 
-      %State{status: :joined, name: name} = state ->
-        Logger.debug("[#{__MODULE__}] #{inspect(name)} is leaving the Chat")
-        Group.leave(name)
-        Bus.broadcast_leave(name)
-        {:stop, :normal, %State{state | status: :left}}
+        :joined ->
+          Logger.debug("[#{__MODULE__}] #{inspect(name)} is leaving the Chat")
+          Group.leave(name)
+          Bus.broadcast_leave(name)
+      end
+
+      {:stop, :normal, %State{state | status: :left}}
     end)
   end
 
@@ -145,12 +147,11 @@ defmodule ProtoHackers.BudgetChat do
         {Bus, %Bus.Message{username: receiver}},
         %State{status: :joined, name: receiver} = state
       ) do
-    Logger.warn("[#{__MODULE__}] User can't broadcast to himself!")
     {:noreply, state}
   end
 
+  @impl true
   def handle_info({Bus, %Bus.Message{}}, %State{status: :connected} = state) do
-    Logger.warn("[#{__MODULE__}] Cannot broadcast to users that have not joined yet!")
     {:noreply, state}
   end
 

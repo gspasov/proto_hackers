@@ -5,11 +5,22 @@ defmodule ProtoHackers.TcpServer do
   """
 
   use FunServer
+  use TypedStruct
 
   alias ProtoHackers.Utils
   alias ProtoHackers.TcpServer.Specification
+  alias ProtoHackers.TcpServer.State
 
   require Logger
+
+  typedstruct module: State do
+    field :socket, port(), required: true
+    field :task_supervisor, :atom, required: true
+    field :on_receive_callback, (port(), any() -> :ok), required: true
+    field :on_connect_callback, (port() -> :ok)
+    field :on_close_callback, (port() -> :ok)
+    field :receive_length, non_neg_integer()
+  end
 
   def start_link(%Specification{
         tcp:
@@ -19,27 +30,31 @@ defmodule ProtoHackers.TcpServer do
             task_supervisor: task_supervisor,
             on_receive_callback: on_receive_callback
           } = tcp_specs,
-        server: %Specification.Server{options: gen_options}
+        server: %Specification.Server{options: fun_options}
       }) do
-    FunServer.start_link(__MODULE__, gen_options, fn ->
+    FunServer.start_link(__MODULE__, fun_options, fn ->
       {:ok, socket} = :gen_tcp.listen(tcp_port, tcp_options)
 
+      tcp_server_name = Keyword.get(fun_options, :name, "No name provided to server")
+
       Logger.debug(
-        "[#{__MODULE__}] starting tcp for #{inspect(Keyword.get(gen_options, :name, "No name provided to server"))} listening on #{inspect(socket)}"
+        "[#{__MODULE__}] TCP for #{inspect(tcp_server_name)} listening on #{inspect(socket)}"
       )
 
       on_close_callback = Map.get(tcp_specs, :on_close_callback, &Utils.id/1)
       on_connect_callback = Map.get(tcp_specs, :on_connect_callback, &Utils.id/1)
-      recv_length = Map.get(tcp_specs, :recv_length, 0)
+      receive_length = Map.get(tcp_specs, :receive_length, 0)
 
-      init_state = %{
+      init_state = %State{
         socket: socket,
         on_receive_callback: on_receive_callback,
         on_close_callback: on_close_callback,
         on_connect_callback: on_connect_callback,
-        recv_length: recv_length,
+        receive_length: receive_length,
         task_supervisor: task_supervisor
       }
+
+      Logger.debug("[#{__MODULE__}] Starting with following state #{inspect(init_state)}")
 
       {:ok, init_state, {:continue, &accept_connection/1}}
     end)
@@ -49,12 +64,12 @@ defmodule ProtoHackers.TcpServer do
   def tcp_close(socket), do: :gen_tcp.close(socket)
 
   defp accept_connection(
-         %{
+         %State{
            socket: socket,
            on_receive_callback: on_receive_callback,
            on_close_callback: on_close_callback,
            on_connect_callback: on_connect_callback,
-           recv_length: recv_length,
+           receive_length: receive_length,
            task_supervisor: task_supervisor
          } = state
        ) do
@@ -73,7 +88,7 @@ defmodule ProtoHackers.TcpServer do
           [
             %{
               socket: client_connection_socket,
-              recv_length: recv_length,
+              receive_length: receive_length,
               on_receive_callback: on_receive_callback,
               on_close_callback: on_close_callback
             }
@@ -101,12 +116,12 @@ defmodule ProtoHackers.TcpServer do
   def handle_client(
         %{
           socket: socket,
-          recv_length: recv_length,
+          receive_length: receive_length,
           on_receive_callback: on_receive_callback,
           on_close_callback: on_close_callback
         } = args
       ) do
-    case :gen_tcp.recv(socket, recv_length) do
+    case :gen_tcp.recv(socket, receive_length) do
       {:ok, packet} ->
         Logger.debug(
           "[#{__MODULE__}] Connection #{inspect(socket)} received packet #{inspect(packet, limit: :infinity)}"

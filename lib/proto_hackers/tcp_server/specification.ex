@@ -10,7 +10,7 @@ defmodule ProtoHackers.TcpServer.Specification do
     field :on_receive_callback, (:gen_tcp.socket(), iodata() -> any), enforce: true
     field :on_connect_callback, (:gen_tcp.socket() -> any)
     field :on_close_callback, (:gen_tcp.socket() -> any)
-    field :recv_length, non_neg_integer()
+    field :receive_length, non_neg_integer()
   end
 
   typedstruct module: Server do

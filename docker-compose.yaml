@@ -2,7 +2,10 @@ version: '3.3'
 
 services:
   backend:
-    build: .
+    build:
+      context: .
+      args:
+        MIX_ENV: "prod"
     stdin_open: true
     ports:
       - "5010:5010"

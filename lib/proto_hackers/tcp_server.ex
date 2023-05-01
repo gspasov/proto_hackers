@@ -53,6 +53,7 @@ defmodule ProtoHackers.TcpServer do
           "Starting TCP for #{inspect(tcp_server_name)}",
           "Listening on socket #{inspect(socket)}",
           "Port #{tcp_port}",
+          "With options #{inspect(tcp_options)}",
           "Initial state #{inspect(init_state)}"
         ]
         |> Enum.join("\n")

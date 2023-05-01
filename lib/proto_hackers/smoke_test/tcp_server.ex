@@ -15,7 +15,7 @@ defmodule ProtoHackers.SmokeTest.TcpServer do
              tcp: %Specification.Tcp{
                port: Keyword.fetch!(opts, :port),
                task_supervisor: Keyword.fetch!(opts, :task_supervisor),
-               options: [{:mode, :binary}, {:active, false}, {:packet, 0}],
+               options: [mode: :binary, active: false, packet: 0],
                on_tcp_receive: &SmokeTest.on_tcp_receive/2
              },
              server: %Specification.Server{

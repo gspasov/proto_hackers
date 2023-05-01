@@ -15,7 +15,7 @@ defmodule ProtoHackers.MeansToAnEnd.TcpServer do
              tcp: %Specification.Tcp{
                port: Keyword.fetch!(opts, :port),
                task_supervisor: Keyword.fetch!(opts, :task_supervisor),
-               options: [{:mode, :binary}, {:active, false}, {:packet, 0}],
+               options: [mode: :binary, active: false, packet: 0],
                on_tcp_receive: &MeansToAnEnd.on_tcp_receive/2,
                on_tcp_close: &MeansToAnEnd.on_tcp_close/1
              },

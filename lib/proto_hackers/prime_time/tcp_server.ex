@@ -15,7 +15,7 @@ defmodule ProtoHackers.PrimeTime.TcpServer do
              tcp: %Specification.Tcp{
                port: Keyword.fetch!(opts, :port),
                task_supervisor: Keyword.fetch!(opts, :task_supervisor),
-               options: [{:mode, :binary}, {:active, false}, {:packet, :line}],
+               options: [mode: :binary, active: false, packet: :line],
                on_tcp_receive: &PrimeTime.on_tcp_receive/2
              },
              server: %Specification.Server{

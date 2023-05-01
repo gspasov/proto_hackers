@@ -38,10 +38,6 @@ defmodule ProtoHackers.TcpServer do
 
       tcp_server_name = Keyword.get(fun_options, :name, "No name provided to server")
 
-      Logger.debug(
-        "[#{__MODULE__}] TCP for #{inspect(tcp_server_name)} listening on #{inspect(socket)}"
-      )
-
       init_state = %State{
         socket: socket,
         on_tcp_receive: on_tcp_receive,
@@ -51,7 +47,9 @@ defmodule ProtoHackers.TcpServer do
         task_supervisor: task_supervisor
       }
 
-      Logger.debug("[#{__MODULE__}] Starting with following state #{inspect(init_state)}")
+      Logger.info(
+        "[#{__MODULE__}]\nStarting TCP for #{inspect(tcp_server_name)}\nListening on #{inspect(socket)}\nInitial state #{inspect(init_state)}"
+      )
 
       {:ok, init_state, {:continue, &accept_connection/1}}
     end)

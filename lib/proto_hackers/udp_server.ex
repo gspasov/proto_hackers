@@ -31,16 +31,24 @@ defmodule ProtoHackers.UdpServer do
     end)
   end
 
-  def send(socket, packet), do: :gen_udp.send(socket, packet)
+  def send({socket, host, port} = udp_info, packet) do
+    Logger.debug("[#{__MODULE__}] Sending to #{inspect(udp_info)}: #{inspect(packet)}")
+    :gen_udp.send(socket, host, port, packet)
+  end
 
-  def close(socket), do: :gen_udp.close(socket)
-
-  def handle_info({:udp, socket, _host, _port, packet}, %{on_udp_receive: on_udp_receive} = state) do
+  def handle_info({:udp, socket, host, port, packet}, %{on_udp_receive: on_udp_receive} = state) do
     Logger.debug(
-      "[#{__MODULE__}] Received packet on socket #{inspect(socket)}: #{inspect(packet)}"
+      [
+        "[#{__MODULE__}]",
+        "Socket: #{inspect(socket)}",
+        "Host: #{inspect(host)}",
+        "Port: #{inspect(port)}",
+        "Packet: #{inspect(packet)}"
+      ]
+      |> Enum.join("\n")
     )
 
-    on_udp_receive.(socket, packet)
+    on_udp_receive.({socket, host, port}, packet)
 
     {:noreply, state}
   end

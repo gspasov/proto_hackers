@@ -18,7 +18,13 @@ defmodule ProtoHackers.UdpServer do
       {:ok, socket} = :gen_udp.open(udp_port, udp_options)
 
       Logger.info(
-        "[#{__MODULE__}] Opened UDP socket on port #{inspect(socket)} with options: #{inspect(udp_options)}"
+        [
+          "[#{__MODULE__}]",
+          "Opened UDP socket #{inspect(socket)}",
+          "Port #{udp_port}",
+          "With options: #{inspect(udp_options)}"
+        ]
+        |> Enum.join("\n")
       )
 
       {:ok, %{socket: socket, on_udp_receive: on_udp_receive}}
@@ -34,7 +40,6 @@ defmodule ProtoHackers.UdpServer do
       "[#{__MODULE__}] Received packet on socket #{inspect(socket)}: #{inspect(packet)}"
     )
 
-    # :gen_udp.send(socket, "hello back") |> IO.inspect(label: "send result")
     on_udp_receive.(packet)
 
     {:noreply, state}

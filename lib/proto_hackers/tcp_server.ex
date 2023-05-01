@@ -48,7 +48,14 @@ defmodule ProtoHackers.TcpServer do
       }
 
       Logger.info(
-        "[#{__MODULE__}]\nStarting TCP for #{inspect(tcp_server_name)}\nListening on #{inspect(socket)}\nInitial state #{inspect(init_state)}"
+        [
+          "[#{__MODULE__}]",
+          "Starting TCP for #{inspect(tcp_server_name)}",
+          "Listening on socket #{inspect(socket)}",
+          "Port #{tcp_port}",
+          "Initial state #{inspect(init_state)}"
+        ]
+        |> Enum.join("\n")
       )
 
       {:ok, init_state, {:continue, &accept_connection/1}}

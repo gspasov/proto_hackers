@@ -11,8 +11,8 @@ defmodule ProtoHackers.UnusualDatabaseProgram do
 
   @equal_sign ?=
 
-  def start_link() do
-    FunServer.start_link(__MODULE__, fn ->
+  def start_link(_arg) do
+    FunServer.start_link(__MODULE__, [name: __MODULE__], fn ->
       {:ok, %{"version" => "Ken's Key-Value Store 1.0"}}
     end)
   end

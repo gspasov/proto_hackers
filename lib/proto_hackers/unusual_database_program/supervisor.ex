@@ -9,6 +9,7 @@ defmodule ProtoHackers.UnusualDatabaseProgram.Supervisor do
 
   def init(port) do
     children = [
+      UnusualDatabaseProgram,
       UnusualDatabaseProgram.UdpServer.spec(port: port)
     ]
 

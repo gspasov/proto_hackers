@@ -40,7 +40,7 @@ defmodule ProtoHackers.UdpServer do
       "[#{__MODULE__}] Received packet on socket #{inspect(socket)}: #{inspect(packet)}"
     )
 
-    on_udp_receive.(packet)
+    on_udp_receive.(socket, packet)
 
     {:noreply, state}
   end

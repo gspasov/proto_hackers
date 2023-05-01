@@ -13,7 +13,7 @@ defmodule ProtoHackers.UnusualDatabaseProgram do
 
   def start_link() do
     FunServer.start_link(__MODULE__, fn ->
-      {:ok, %{udp_socket: nil, store: %{"version" => "Ken's Key-Value Store 1.0"}}}
+      {:ok, %{"version" => "Ken's Key-Value Store 1.0"}}
     end)
   end
 
@@ -25,36 +25,36 @@ defmodule ProtoHackers.UnusualDatabaseProgram do
   end
 
   @impl true
-  def on_udp_receive(packet) when byte_size(packet) < 1000 do
+  def on_udp_receive(socket, packet) when byte_size(packet) < 1000 do
     packet
     |> parse_request()
-    |> handle_request()
+    |> handle_request(socket)
   end
 
   @impl true
-  def on_udp_receive(packet) do
+  def on_udp_receive(_socket, packet) do
     Logger.warn("[#{__MODULE__}] Packet too large: #{byte_size(packet)} bytes")
     :ignore
   end
 
-  def handle_request(%Request.Insert{key: "version"}) do
+  def handle_request(%Request.Insert{key: "version"}, _socket) do
     Logger.warn("[#{__MODULE__}] Client tries to modify 'version'")
     :ignore
   end
 
-  def handle_request(%Request.Insert{key: key, value: value}) do
-    FunServer.async(__MODULE__, fn %{store: store} = state ->
-      new_store = Map.update(store, key, value, fn _ -> value end)
-      {:noreply, %{state | store: new_store}}
+  def handle_request(%Request.Insert{key: key, value: value}, _socket) do
+    FunServer.async(__MODULE__, fn state ->
+      new_state = Map.update(state, key, value, fn _ -> value end)
+      {:noreply, new_state}
     end)
   end
 
-  def handle_request(%Request.Retrieve{key: key}) do
-    FunServer.async(__MODULE__, fn %{udp_socket: udp_socket, store: store} = state ->
-      store
+  def handle_request(%Request.Retrieve{key: key}, socket) do
+    FunServer.async(__MODULE__, fn state ->
+      state
       |> Map.get(key)
       |> Maybe.pure()
-      |> Maybe.on_just(fn value -> UdpServer.send(udp_socket, "#{key}=#{value}") end)
+      |> Maybe.on_just(fn value -> UdpServer.send(socket, "#{key}=#{value}") end)
 
       {:noreply, state}
     end)

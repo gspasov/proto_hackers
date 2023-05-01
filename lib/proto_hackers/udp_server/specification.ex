@@ -3,9 +3,7 @@ defmodule ProtoHackers.UdpServer.Specification do
 
   alias ProtoHackers.UdpServer.Specification
 
-  # @type on_udp_connect :: (:gen_tcp.socket() -> :ok)
   @type on_udp_receive :: (:gen_udp.socket(), any() -> :ok)
-  # @type on_udp_close :: on_tcp_connect()
 
   typedstruct module: Udp do
     field :port, non_neg_integer(), enforce: true
@@ -18,7 +16,7 @@ defmodule ProtoHackers.UdpServer.Specification do
   end
 
   typedstruct enforce: true do
-    field :tcp, Tcp.t()
+    field :tcp, Udp.t()
     field :server, Server.t()
   end
 end

@@ -13,7 +13,7 @@ defmodule ProtoHackers.UnusualDatabaseProgram.UdpServer do
              tcp: %Specification.Udp{
                port: Keyword.fetch!(options, :port),
                options: [mode: :binary, active: true],
-               on_udp_receive: &UnusualDatabaseProgram.on_udp_receive/1
+               on_udp_receive: &UnusualDatabaseProgram.on_udp_receive/2
              },
              server: %Specification.Server{
                options: [name: __MODULE__]

@@ -7,6 +7,7 @@ defmodule ProtoHackers.Application do
   alias ProtoHackers.PrimeTime
   alias ProtoHackers.MeansToAnEnd
   alias ProtoHackers.BudgetChat
+  alias ProtoHackers.UnusualDatabaseProgram
 
   @impl true
   def start(_type, _args) do
@@ -15,7 +16,8 @@ defmodule ProtoHackers.Application do
       {SmokeTest.Supervisor, 5010},
       {PrimeTime.Supervisor, 5020},
       {MeansToAnEnd.Supervisor, 5030},
-      {BudgetChat.Supervisor, 5040}
+      {BudgetChat.Supervisor, 5040},
+      {UnusualDatabaseProgram.Supervisor, 6000}
     ]
 
     opts = [strategy: :one_for_one, name: ProtoHackers.Supervisor]

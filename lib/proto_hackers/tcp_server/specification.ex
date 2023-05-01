@@ -20,7 +20,7 @@ defmodule ProtoHackers.TcpServer.Specification do
   end
 
   typedstruct module: Server do
-    field :options, GenServer.options()
+    field :options, GenServer.options(), default: []
   end
 
   typedstruct enforce: true do

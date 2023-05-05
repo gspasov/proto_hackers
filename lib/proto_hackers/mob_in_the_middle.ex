@@ -40,7 +40,7 @@ defmodule ProtoHackers.MobInTheMiddle do
 
     FunServer.async(server_pid, fn %{server_socket: server_socket} = state ->
       Logger.debug("[#{__MODULE__}] Sending packet to upstream server")
-      TcpServer.send(server_socket, packet)
+      TcpServer.send(server_socket, maybe_replace_boguscoin_address(packet))
 
       {:noreply, state}
     end)

@@ -91,17 +91,17 @@ defmodule ProtoHackers.MobInTheMiddle do
 
   @spec maybe_replace_boguscoin_address(message) :: message when message: String.t()
   def maybe_replace_boguscoin_address(message) do
-    ~r/^\s?7[a-zA-Z0-9]{26,35}|7[a-zA-Z0-9]{26,35}\s?\n?$/
+    ~r/\s?7[a-zA-Z0-9]{25,34}(\s|\n)/
     |> Regex.replace(message, fn match ->
       case match do
+        <<" ", _address::binary-size(byte_size(match) - 2), " ">> ->
+          " #{@tony_boguscoin_address} "
+
         <<" ", _address::binary>> ->
           " #{@tony_boguscoin_address}"
 
         <<_address::binary-size(byte_size(match) - 1), " ">> ->
           "#{@tony_boguscoin_address} "
-
-        <<_address::binary-size(byte_size(match) - 2), " ", "\n">> ->
-          "#{@tony_boguscoin_address} \n"
 
         <<_address::binary-size(byte_size(match) - 1), "\n">> ->
           "#{@tony_boguscoin_address}\n"

@@ -37,10 +37,16 @@ defmodule ProtoHackers.MobInTheMiddle do
   @impl true
   def on_tcp_receive(socket, packet) do
     {:ok, server_pid} = maybe_session_pid(socket)
+    Logger.debug("[#{__MODULE__}] Received packet: #{inspect(packet)}")
 
     FunServer.async(server_pid, fn %{server_socket: server_socket} = state ->
-      Logger.debug("[#{__MODULE__}] Sending packet to upstream server")
-      TcpServer.send(server_socket, maybe_replace_boguscoin_address(packet))
+      packet_with_replaced_address = maybe_replace_boguscoin_address(packet)
+
+      Logger.debug(
+        "[#{__MODULE__}] Sending packet to upstream: #{inspect(packet_with_replaced_address)}"
+      )
+
+      TcpServer.send(server_socket, packet_with_replaced_address)
 
       {:noreply, state}
     end)

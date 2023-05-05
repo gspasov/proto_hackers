@@ -101,7 +101,7 @@ defmodule ProtoHackers.MobInTheMiddle do
     |> Regex.replace(message, fn match ->
       case match do
         <<first::binary-1, _address::binary-size(byte_size(match) - 2), last::binary-1>> ->
-          "#{first}#{@tony_boguscoin_address}#{last}"
+          "#{parse_first_char(first)}#{@tony_boguscoin_address}#{parse_last_char(last)}"
       end
     end)
     |> case do
@@ -109,6 +109,13 @@ defmodule ProtoHackers.MobInTheMiddle do
       new_message -> new_message
     end
   end
+
+  defp parse_first_char(<<?\s>>), do: <<?\s>>
+  defp parse_first_char(_), do: ""
+
+  defp parse_last_char(<<?\s>>), do: <<?\s>>
+  defp parse_last_char(<<?\n>>), do: <<?\n>>
+  defp parse_last_char(_), do: ""
 
   defp maybe_session_pid(socket) do
     case Registry.lookup(registry_name(), socket) do

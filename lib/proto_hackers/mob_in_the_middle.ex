@@ -66,8 +66,14 @@ defmodule ProtoHackers.MobInTheMiddle do
 
   @impl true
   def handle_info({:tcp, server, packet}, %{server_socket: server, client_socket: socket} = state) do
-    Logger.debug("[#{__MODULE__}] Receiving packet from upstream server #{inspect(packet)}")
-    TcpServer.send(socket, packet)
+    Logger.debug("[#{__MODULE__}] Receiving packet from upstream: #{inspect(packet)}")
+    packet_with_replaced_address = maybe_replace_boguscoin_address(packet)
+
+    Logger.debug(
+      "[#{__MODULE__}] Sending packet from upstream: #{inspect(packet_with_replaced_address)}"
+    )
+
+    TcpServer.send(socket, packet_with_replaced_address)
 
     {:noreply, state}
   end

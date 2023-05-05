@@ -100,20 +100,8 @@ defmodule ProtoHackers.MobInTheMiddle do
     ~r/\s?7[a-zA-Z0-9]{25,34}(\s|\n)/
     |> Regex.replace(message, fn match ->
       case match do
-        <<" ", _address::binary-size(byte_size(match) - 2), " ">> ->
-          " #{@tony_boguscoin_address} "
-
-        <<" ", _address::binary>> ->
-          " #{@tony_boguscoin_address}"
-
-        <<_address::binary-size(byte_size(match) - 1), " ">> ->
-          "#{@tony_boguscoin_address} "
-
-        <<_address::binary-size(byte_size(match) - 1), "\n">> ->
-          "#{@tony_boguscoin_address}\n"
-
-        _address ->
-          @tony_boguscoin_address
+        <<first::binary-1, _address::binary-size(byte_size(match) - 2), last::binary-1>> ->
+          "#{first}#{@tony_boguscoin_address}#{last}"
       end
     end)
     |> case do

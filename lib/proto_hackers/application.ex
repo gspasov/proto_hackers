@@ -7,6 +7,7 @@ defmodule ProtoHackers.Application do
   alias ProtoHackers.PrimeTime
   alias ProtoHackers.MeansToAnEnd
   alias ProtoHackers.BudgetChat
+  alias ProtoHackers.MobInTheMiddle
   alias ProtoHackers.UnusualDatabaseProgram
 
   @impl true
@@ -17,6 +18,7 @@ defmodule ProtoHackers.Application do
       {PrimeTime.Supervisor, 5020},
       {MeansToAnEnd.Supervisor, 5030},
       {BudgetChat.Supervisor, 5040},
+      {MobInTheMiddle.Supervisor, 5050},
       {UnusualDatabaseProgram.Supervisor, 6000}
     ]
 

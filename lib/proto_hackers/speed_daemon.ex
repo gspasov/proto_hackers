@@ -145,8 +145,9 @@ defmodule ProtoHackers.SpeedDaemon do
 
   def handle_request(server, %IAmDispatcher{} = dispatcher) do
     FunServer.async(server, fn state ->
-      OverWatch.Bus.broadcast_dispatcher(self(), dispatcher)
-      Ticket.Bus.subscribe(self())
+      server_pid = self()
+      Ticket.Bus.subscribe(server_pid)
+      OverWatch.Bus.broadcast_dispatcher(server_pid, dispatcher)
       {:noreply, %State{state | type: :dispatcher, dispatcher: dispatcher}}
     end)
   end

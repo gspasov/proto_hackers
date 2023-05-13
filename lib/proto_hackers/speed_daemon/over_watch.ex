@@ -59,10 +59,12 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {:add, dispatcher_client, %IAmDispatcher{roads: roads}}},
+        {OverWatch.Bus, {:add, dispatcher_client, %IAmDispatcher{roads: roads}} = dispatcher},
         %State{dispatcher_clients: dispatcher_clients, violations: violations} = state
       )
       when is_pid(dispatcher_client) do
+    Logger.debug("[#{__MODULE__}] Adding dispatcher #{inspect(dispatcher)}")
+
     new_dispatchers =
       Enum.reduce(roads, dispatcher_clients, fn road, acc ->
         Map.update(acc, road, [dispatcher_client], fn dispatcher_clients ->

@@ -181,7 +181,6 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           {new_observed_plates, new_violations}
       end
 
-    Logger.debug("[#{__MODULE__}] New Violations #{inspect(new_violations)}")
     {:noreply, %State{state | observed_plates: new_observed_plates, violations: new_violations}}
   end
 
@@ -217,7 +216,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       |> case do
         [] ->
           Logger.debug(
-            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}, #{inspect(violations)}"
+            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}"
           )
 
           nil

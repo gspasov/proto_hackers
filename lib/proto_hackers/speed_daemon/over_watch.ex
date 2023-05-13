@@ -122,6 +122,8 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           dispatcher_clients: dispatcher_clients
         } = state
       ) do
+    Logger.debug("[#{__MODULE__}] New snapshot #{inspect(snapshot1)}")
+
     {new_observed_plates, new_violations} =
       case Map.get(observed_plates, {road, plate_text}) do
         nil ->
@@ -163,6 +165,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           {new_observed_plates, new_violations}
       end
 
+    Logger.debug("[#{__MODULE__}] New Violations #{inspect(new_violations)}")
     {:noreply, %State{state | observed_plates: new_observed_plates, violations: new_violations}}
   end
 

@@ -143,7 +143,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           new_violations =
             first_snapshot
             |> maybe_violation(second_snapshot, violations)
-            |> Maybe.fmap(fn violation ->
+            |> Maybe.fmap(fn %Violation{ticket: ticket} = violation ->
               # If there is available Dispatcher, broadcast the Ticket to one Dispatcher.
               # Otherwise just store the Ticket as 'generated'.
               # It will be send as soon as a Dispatcher for that road appears.
@@ -164,13 +164,11 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
                   %{{road, plate_text} => violation}
 
                 {_key, [client | _clients]} when is_pid(client) ->
-                  Enum.each(violations, fn {_key, %Violation{ticket: ticket}} ->
-                    Logger.debug(
-                      "[#{__MODULE__}] #{inspect(client)} Send[2] Ticket #{inspect(ticket)}"
-                    )
+                  Logger.debug(
+                    "[#{__MODULE__}] #{inspect(client)} Send[2] Ticket #{inspect(ticket)}"
+                  )
 
-                    Ticket.Bus.broadcast_ticket(client, ticket)
-                  end)
+                  Ticket.Bus.broadcast_ticket(client, ticket)
 
                   %{{road, plate_text} => %Violation{violation | type: :done}}
               end

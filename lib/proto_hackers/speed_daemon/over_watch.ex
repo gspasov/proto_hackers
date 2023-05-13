@@ -194,7 +194,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       nil
     else
       Enum.reduce(start_day..end_day, [], fn day, acc ->
-        if has_been_ticketed_that_day?(day, road, plate, tickets) do
+        if has_been_ticketed_that_day?(day, plate, tickets) do
           acc
         else
           [
@@ -215,7 +215,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       |> case do
         [] ->
           Logger.debug(
-            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}, #{tickets}"
+            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}, #{inspect(tickets)}"
           )
 
           nil
@@ -264,7 +264,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   defp calculate_day(timestamp), do: Kernel.floor(timestamp / @day_length)
 
-  defp has_been_ticketed_that_day?(day, road, plate, tickets) do
+  defp has_been_ticketed_that_day?(day, plate, tickets) do
     Enum.find(tickets, false, fn
       {{^day, _road, ^plate, _type}, _ticket} -> true
       _ -> false

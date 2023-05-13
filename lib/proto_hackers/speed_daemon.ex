@@ -2,6 +2,7 @@ defmodule ProtoHackers.SpeedDaemon do
   use FunServer
   use TypedStruct
 
+  alias ProtoHackers.SpeedDaemon.Request.Error
   alias ProtoHackers.TcpServer
   alias ProtoHackers.SpeedDaemon.OverWatch
   alias ProtoHackers.SpeedDaemon.OverWatch.Snapshot
@@ -103,10 +104,25 @@ defmodule ProtoHackers.SpeedDaemon do
   end
 
   def handle_request(server, %WantHeartbeat{interval: interval}) do
-    FunServer.async(server, fn state ->
-      interval_in_milliseconds = deciseconds_to_milliseconds(interval)
-      Process.send_after(self(), :heartbeat, interval_in_milliseconds)
-      {:noreply, %State{state | heartbeat: interval_in_milliseconds}}
+    FunServer.async(server, fn
+      %State{heartbeat: nil} = state ->
+        interval_in_milliseconds = deciseconds_to_milliseconds(interval)
+
+        if interval_in_milliseconds > 0 do
+          Process.send_after(self(), :heartbeat, interval_in_milliseconds)
+        end
+
+        {:noreply, %State{state | heartbeat: interval_in_milliseconds}}
+
+      %State{tcp_socket: tcp_socket} = state ->
+        TcpServer.send(
+          tcp_socket,
+          Request.encode(%Error{
+            message: "Cannot send multiple 'WantHeartbeat' in a single session!"
+          })
+        )
+
+        {:noreply, state}
     end)
   end
 

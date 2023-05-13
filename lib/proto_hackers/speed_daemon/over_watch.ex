@@ -74,7 +74,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       Enum.into(violations, %{}, fn
         {{road, _plate} = key, %Violation{ticket: ticket} = violation} = ticket_data ->
           if Enum.any?(roads, fn r -> r == road end) do
-            Logger.debug("[#{__MODULE__}] Send ticket #{inspect(ticket)}")
+            Logger.debug(
+              "[#{__MODULE__}] #{inspect(dispatcher_client)} Send[1] ticket #{inspect(ticket)}"
+            )
+
             Ticket.Bus.broadcast(dispatcher_client, ticket)
             {key, %Violation{violation | type: :done}}
           else
@@ -90,10 +93,12 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {:remove, dispatcher_client, %IAmDispatcher{roads: roads}}},
+        {OverWatch.Bus, {:remove, dispatcher_client, %IAmDispatcher{roads: roads}} = dispatcher},
         %State{dispatcher_clients: dispatcher_clients} = state
       )
       when is_pid(dispatcher_client) do
+    Logger.debug("[#{__MODULE__}] Removing dispatcher #{inspect(dispatcher)}")
+
     left_dispatchers =
       roads
       |> Enum.reduce(dispatcher_clients, fn road, acc ->
@@ -149,7 +154,9 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
                 {_key, [client | _clients]} when is_pid(client) ->
                   Enum.each(violations, fn {_key, %Violation{ticket: ticket}} ->
-                    Logger.debug("[#{__MODULE__}] Sending Ticket #{inspect(ticket)}")
+                    Logger.debug(
+                      "[#{__MODULE__}] #{inspect(client)} Send[2] Ticket #{inspect(ticket)}"
+                    )
 
                     Ticket.Bus.broadcast_ticket(client, ticket)
                   end)

@@ -80,7 +80,7 @@ defmodule ProtoHackers.SpeedDaemon do
   def stop(server) do
     FunServer.async(server, fn %State{type: type, dispatcher: dispatcher} = state ->
       if type == :dispatcher do
-        OverWatch.Bus.broadcast_dispatcher_close(self(), dispatcher)
+        OverWatch.Bus.broadcast_dispatcher_remove(self(), dispatcher)
       end
 
       {:stop, :normal, state}

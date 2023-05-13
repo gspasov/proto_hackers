@@ -12,6 +12,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
   alias ProtoHackers.SpeedDaemon.OverWatch
   alias ProtoHackers.SpeedDaemon.OverWatch.State
   alias ProtoHackers.SpeedDaemon.OverWatch.Snapshot
+  alias ProtoHackers.SpeedDaemon.OverWatch.Violation
   alias ProtoHackers.SpeedDaemon.Ticket
   alias ProtoHackers.SpeedDaemon.Request
   alias ProtoHackers.SpeedDaemon.Request.Plate
@@ -22,14 +23,17 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
   require Logger
 
   @type day :: non_neg_integer()
-  @type tickets :: %{
-          {OverWatch.day(), SpeedDaemon.road(), SpeedDaemon.plate(), :pending | :done} =>
-            Request.Ticket.t()
-        }
+  @type violations :: %{{SpeedDaemon.road(), SpeedDaemon.plate()} => Violation.t()}
 
   @day_length 86_400
   @seconds_in_an_hour 3600
   @allowed_mph_overhead 0.5
+
+  typedstruct module: Violation, required: true do
+    field :days, [non_neg_integer(), ...]
+    field :ticket, Request.Ticket.t()
+    field :type, :pending | :done
+  end
 
   typedstruct module: Snapshot, required: true do
     field :camera, IAmCamera.t()
@@ -43,7 +47,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           %{{SpeedDaemon.road(), SpeedDaemon.plate()} => Snapshot.t()},
           default: %{}
 
-    field :tickets, OverWatch.tickets(), default: %{}
+    field :violations, OverWatch.violations(), default: %{}
   end
 
   def start_link(_args) do
@@ -55,8 +59,8 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {dispatcher_client, %IAmDispatcher{roads: roads}}},
-        %State{dispatcher_clients: dispatcher_clients, tickets: tickets} = state
+        {OverWatch.Bus, {:add, dispatcher_client, %IAmDispatcher{roads: roads}}},
+        %State{dispatcher_clients: dispatcher_clients, violations: violations} = state
       )
       when is_pid(dispatcher_client) do
     new_dispatchers =
@@ -66,13 +70,13 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
         end)
       end)
 
-    new_tickets =
-      Enum.into(tickets, %{}, fn
-        {{day, road, plate, :pending}, ticket} = ticket_data ->
+    new_violations =
+      Enum.into(violations, %{}, fn
+        {{road, _plate} = key, %Violation{ticket: ticket} = violation} = ticket_data ->
           if Enum.any?(roads, fn r -> r == road end) do
-            Logger.debug("[#{__MODULE__}] Send ticket #{inspect(ticket)} On Day #{day}")
+            Logger.debug("[#{__MODULE__}] Send ticket #{inspect(ticket)}")
             Ticket.Bus.broadcast(dispatcher_client, ticket)
-            {{day, road, plate, :done}, ticket}
+            {key, %Violation{violation | type: :done}}
           else
             ticket_data
           end
@@ -81,12 +85,12 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           ticket_data
       end)
 
-    {:noreply, %State{state | dispatcher_clients: new_dispatchers, tickets: new_tickets}}
+    {:noreply, %State{state | dispatcher_clients: new_dispatchers, violations: new_violations}}
   end
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {:close, dispatcher_client, %IAmDispatcher{roads: roads}}},
+        {OverWatch.Bus, {:remove, dispatcher_client, %IAmDispatcher{roads: roads}}},
         %State{dispatcher_clients: dispatcher_clients} = state
       )
       when is_pid(dispatcher_client) do
@@ -114,23 +118,23 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
          } = snapshot1},
         %State{
           observed_plates: observed_plates,
-          tickets: tickets,
+          violations: violations,
           dispatcher_clients: dispatcher_clients
         } = state
       ) do
-    {new_observed_plates, new_tickets} =
+    {new_observed_plates, new_violations} =
       case Map.get(observed_plates, {road, plate_text}) do
         nil ->
-          op = Map.put(observed_plates, {road, plate_text}, snapshot1)
-          {op, tickets}
+          new_observed_plates = Map.put(observed_plates, {road, plate_text}, snapshot1)
+          {new_observed_plates, violations}
 
         snapshot2 ->
           {first_snapshot, second_snapshot} = order_snapshots(snapshot1, snapshot2)
 
-          new_tickets =
+          new_violations =
             first_snapshot
-            |> maybe_tickets(second_snapshot, tickets)
-            |> Maybe.fmap(fn tickets ->
+            |> maybe_violation(second_snapshot, violations)
+            |> Maybe.fmap(fn violation ->
               # If there is available Dispatcher, broadcast the Ticket to one Dispatcher.
               # Otherwise just store the Ticket as 'generated'.
               # It will be send as soon as a Dispatcher for that road appears.
@@ -139,31 +143,27 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
               |> Enum.find(fn {dispatcher_road, _} -> dispatcher_road == road end)
               |> case do
                 nil ->
-                  Enum.into(tickets, %{}, fn {day, ticket} ->
-                    {{day, road, plate_text, :pending}, ticket}
-                  end)
+                  %{{road, plate_text} => violation}
 
                 {_key, [client | _clients]} when is_pid(client) ->
-                  Enum.each(tickets, fn {day, ticket} ->
-                    Logger.debug(
-                      "[#{__MODULE__}] On Day #{day} sending Ticket #{inspect(ticket)}"
-                    )
+                  Enum.each(violations, fn %Violation{ticket: ticket} ->
+                    Logger.debug("[#{__MODULE__}] Sending Ticket #{inspect(ticket)}")
 
                     Ticket.Bus.broadcast_ticket(client, ticket)
                   end)
 
-                  Enum.into(tickets, %{}, fn {day, ticket} ->
-                    {{day, road, plate_text, :done}, ticket}
-                  end)
+                  %{{road, plate_text} => %Violation{violation | type: :done}}
               end
             end)
-            |> Maybe.fold(tickets, fn new_tickets -> Map.merge(tickets, new_tickets) end)
+            |> Maybe.fold(violations, fn new_violations ->
+              Map.merge(violations, new_violations)
+            end)
 
-          op = Map.put(observed_plates, {road, plate_text}, snapshot2)
-          {op, new_tickets}
+          new_observed_plates = Map.put(observed_plates, {road, plate_text}, snapshot2)
+          {new_observed_plates, new_violations}
       end
 
-    {:noreply, %State{state | observed_plates: new_observed_plates, tickets: new_tickets}}
+    {:noreply, %State{state | observed_plates: new_observed_plates, violations: new_violations}}
   end
 
   @impl true
@@ -172,9 +172,9 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
     {:noreply, state}
   end
 
-  @spec maybe_tickets(Snapshot.t(), Snapshot.t(), OverWatch.tickets()) ::
-          Maybe.t([{day :: non_neg_integer(), Request.Ticket.t()}, ...])
-  def maybe_tickets(
+  @spec maybe_violation(Snapshot.t(), Snapshot.t(), OverWatch.violations()) ::
+          Maybe.t(Violation.t())
+  def maybe_violation(
         %Snapshot{
           camera: %IAmCamera{road: road, limit: limit, mile: mile1},
           plate: %Plate{timestamp: timestamp1}
@@ -183,7 +183,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           camera: %IAmCamera{mile: mile2},
           plate: %Plate{plate: plate, timestamp: timestamp2}
         } = second_snapshot,
-        tickets
+        violations
       ) do
     start_day = calculate_day(timestamp1)
     end_day = calculate_day(timestamp2)
@@ -193,35 +193,30 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       Logger.debug("[#{__MODULE__}] Should not ticket for speed #{mph}")
       nil
     else
-      Enum.reduce(start_day..end_day, [], fn day, acc ->
-        if has_been_ticketed_that_day?(day, plate, tickets) do
-          acc
-        else
-          [
-            {day,
-             %Request.Ticket{
-               mile1: mile1,
-               mile2: mile2,
-               road: road,
-               plate: plate,
-               speed: mph,
-               timestamp1: timestamp1,
-               timestamp2: timestamp2
-             }}
-            | acc
-          ]
-        end
-      end)
+      start_day..end_day
+      |> Enum.reject(fn day -> has_been_ticketed_that_day?(day, plate, violations) end)
       |> case do
         [] ->
           Logger.debug(
-            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}, #{inspect(tickets)}"
+            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}, #{inspect(violations)}"
           )
 
           nil
 
-        tickets ->
-          Maybe.pure(tickets)
+        days ->
+          Maybe.pure(%Violation{
+            type: :pending,
+            days: days,
+            ticket: %Request.Ticket{
+              mile1: mile1,
+              mile2: mile2,
+              road: road,
+              plate: plate,
+              speed: mph,
+              timestamp1: timestamp1,
+              timestamp2: timestamp2
+            }
+          })
       end
     end
   end
@@ -264,9 +259,9 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   defp calculate_day(timestamp), do: Kernel.floor(timestamp / @day_length)
 
-  defp has_been_ticketed_that_day?(day, plate, tickets) do
-    Enum.find(tickets, false, fn
-      {{^day, _road, ^plate, _type}, _ticket} -> true
+  defp has_been_ticketed_that_day?(day, plate, violations) do
+    Enum.find(violations, false, fn
+      {{_road, ^plate}, %Violation{days: days}} -> Enum.any?(days, fn d -> d == day end)
       _ -> false
     end)
   end

@@ -23,7 +23,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch.Bus do
 
   @spec broadcast_dispatcher(client :: pid(), IAmDispatcher.t()) :: :ok
   def broadcast_dispatcher(client, %IAmDispatcher{} = dispatcher) do
-    broadcast({client, dispatcher})
+    broadcast({:add, client, dispatcher})
   end
 
   @spec broadcast_snapshot(Snapshot.t()) :: :ok
@@ -31,9 +31,9 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch.Bus do
     broadcast(snapshot)
   end
 
-  @spec broadcast_dispatcher_close(client :: pid(), IAmDispatcher.t()) :: :ok
-  def broadcast_dispatcher_close(client, %IAmDispatcher{} = dispatcher) do
-    broadcast({:close, client, dispatcher})
+  @spec broadcast_dispatcher_remove(client :: pid(), IAmDispatcher.t()) :: :ok
+  def broadcast_dispatcher_remove(client, %IAmDispatcher{} = dispatcher) do
+    broadcast({:remove, client, dispatcher})
   end
 
   defp name(), do: __MODULE__

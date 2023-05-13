@@ -15,7 +15,7 @@ defmodule ProtoHackers.SpeedDaemon.Supervisor do
       {Registry, keys: :unique, name: SpeedDaemon.registry_name()},
       {DynamicSupervisor, name: SpeedDaemon.dynamic_supervisor_name(), strategy: :one_for_one},
       SpeedDaemon.OverWatch,
-      SpeedDaemon.TcpServer.spec(port: port)
+      SpeedDaemon.TcpServer.spec(port: port, task_supervisor: task_supervisor)
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

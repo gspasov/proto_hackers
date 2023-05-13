@@ -126,17 +126,33 @@ defmodule ProtoHackers.SpeedDaemon do
   end
 
   def handle_request(server, %IAmCamera{} = camera) do
-    FunServer.async(server, fn state ->
-      {:noreply, %State{state | type: :camera, camera: camera}}
+    FunServer.async(server, fn
+      %State{type: nil} = state ->
+        {:noreply, %State{state | type: :camera, camera: camera}}
+
+      %State{tcp_socket: socket} = state ->
+        error_message = "Cannot change client type!"
+
+        Logger.warn("[#{__MODULE__}] #{inspect(error_message)}")
+        TcpServer.send(socket, Request.encode(%Request.Error{message: error_message}))
+        {:noreply, state}
     end)
   end
 
   def handle_request(server, %IAmDispatcher{} = dispatcher) do
-    FunServer.async(server, fn state ->
-      server_pid = self()
-      Ticket.Bus.subscribe(server_pid)
-      OverWatch.Bus.broadcast_dispatcher(server_pid, dispatcher)
-      {:noreply, %State{state | type: :dispatcher, dispatcher: dispatcher}}
+    FunServer.async(server, fn
+      %State{type: nil} = state ->
+        server_pid = self()
+        Ticket.Bus.subscribe(server_pid)
+        OverWatch.Bus.broadcast_dispatcher(server_pid, dispatcher)
+        {:noreply, %State{state | type: :dispatcher, dispatcher: dispatcher}}
+
+      %State{tcp_socket: socket} = state ->
+        error_message = "Cannot change client type!"
+
+        Logger.warn("[#{__MODULE__}] #{inspect(error_message)}")
+        TcpServer.send(socket, Request.encode(%Request.Error{message: error_message}))
+        {:noreply, state}
     end)
   end
 
@@ -146,12 +162,12 @@ defmodule ProtoHackers.SpeedDaemon do
         OverWatch.Bus.broadcast_snapshot(%Snapshot{camera: camera, plate: plate})
         {:noreply, state}
 
-      %State{type: non_camera_type, tcp_socket: tcp_socket} = state ->
+      %State{type: non_camera_type, tcp_socket: socket} = state ->
         error_message =
           "Only 'camera' clients can accept a Plate request, got: #{inspect(non_camera_type)}"
 
         Logger.warn("[#{__MODULE__}] #{inspect(error_message)}")
-        TcpServer.send(tcp_socket, Request.encode(%Request.Error{message: error_message}))
+        TcpServer.send(socket, Request.encode(%Request.Error{message: error_message}))
 
         {:noreply, state}
     end)

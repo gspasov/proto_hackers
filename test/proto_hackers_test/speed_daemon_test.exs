@@ -1,129 +1,148 @@
 defmodule ProtoHackersTest.SpeedDaemonTest do
   use ExUnit.Case, async: true
 
-  alias ProtoHackers.SpeedDaemon
-  alias ProtoHackers.SpeedDaemon.Type
+  alias ProtoHackers.SpeedDaemon.Request
 
-  test "parses Error correctly" do
-    parse_result =
-      "100b696c6c6567616c206d7367"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+  describe "Encoder works properly" do
+    test "encodes Heartbeat correctly" do
+      encode_result = Request.encode(%Request.Heartbeat{})
 
-    assert parse_result == {%Type.Error{message: "illegal msg"}, <<>>}
+      assert encode_result == <<65>>
+    end
 
-    parse_result2 =
-      "1003626164"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+    test "encodes Error correctly" do
+      encode_result = Request.encode(%Request.Error{message: "illegal msg"})
+      assert encode_result == <<16, 11, 105, 108, 108, 101, 103, 97, 108, 32, 109, 115, 103>>
 
-    assert parse_result2 == {%Type.Error{message: "bad"}, <<>>}
+      encode_result2 = Request.encode(%Request.Error{message: "bad"})
+      assert encode_result2 == <<16, 3, 98, 97, 100>>
+    end
+
+    test "encodes Ticket correctly" do
+      encode_result =
+        Request.encode(%Request.Ticket{
+          plate: "UN1X",
+          road: 66,
+          mile1: 100,
+          timestamp1: 123_456,
+          mile2: 110,
+          timestamp2: 123_816,
+          speed: 10000
+        })
+
+      assert encode_result ==
+               <<33, 4, 85, 78, 49, 88, 0, 66, 0, 100, 0, 1, 226, 64, 0, 110, 0, 1, 227, 168, 39,
+                 16>>
+
+      encode_result2 =
+        Request.encode(%Request.Ticket{
+          plate: "RE05BKG",
+          road: 368,
+          mile1: 1234,
+          timestamp1: 1_000_000,
+          mile2: 1235,
+          timestamp2: 1_000_060,
+          speed: 6000
+        })
+
+      assert encode_result2 ==
+               <<33, 7, 82, 69, 48, 53, 66, 75, 71, 1, 112, 4, 210, 0, 15, 66, 64, 4, 211, 0, 15,
+                 66, 124, 23, 112>>
+    end
   end
 
-  test "parses Plate correctly" do
-    parse_result =
-      "200752453035424b470001e240"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+  describe "decodes correctly" do
+    test "decodes Plate correctly" do
+      decode_result =
+        "200752453035424b470001e240"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result == {%Type.Plate{plate: "RE05BKG", timestamp: 123_456}, <<>>}
+      assert decode_result == {[%Request.Plate{plate: "RE05BKG", timestamp: 123_456}], <<>>}
 
-    parse_result2 =
-      "2004554e3158000003e8"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+      decode_result2 =
+        "2004554e3158000003e8"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result2 == {%Type.Plate{plate: "UN1X", timestamp: 1000}, <<>>}
-  end
+      assert decode_result2 == {[%Request.Plate{plate: "UN1X", timestamp: 1000}], <<>>}
+    end
 
-  test "parses Ticket correctly" do
-    parse_result =
-      "2104554e3158004200640001e240006e0001e3a82710"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+    test "decodes WantHeartbeat correctly" do
+      decode_result =
+        "400000000a"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result ==
-             {%Type.Ticket{
-                plate: "UN1X",
-                road: 66,
-                mile1: 100,
-                timestamp1: 123_456,
-                mile2: 110,
-                timestamp2: 123_816,
-                speed: 10000
-              }, <<>>}
+      assert decode_result == {[%Request.WantHeartbeat{interval: 10}], <<>>}
 
-    parse_result2 =
-      "210752453035424b47017004d2000f424004d3000f427c1770"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+      decode_result2 =
+        "40000004db"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result2 ==
-             {%Type.Ticket{
-                plate: "RE05BKG",
-                road: 368,
-                mile1: 1234,
-                timestamp1: 1_000_000,
-                mile2: 1235,
-                timestamp2: 1_000_060,
-                speed: 6000
-              }, <<>>}
-  end
+      assert decode_result2 == {[%Request.WantHeartbeat{interval: 1243}], <<>>}
+    end
 
-  test "parses WantHeartbeat correctly" do
-    parse_result =
-      "400000000a"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+    test "decodes IAmCamera correctly" do
+      decode_result =
+        "8000420064003c"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result == {%Type.WantHeartbeat{interval: 10}, <<>>}
+      assert decode_result == {[%Request.IAmCamera{road: 66, mile: 100, limit: 60}], <<>>}
 
-    parse_result2 =
-      "40000004db"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+      decode_result2 =
+        "80017004d20028"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result2 == {%Type.WantHeartbeat{interval: 1243}, <<>>}
-  end
+      assert decode_result2 == {[%Request.IAmCamera{road: 368, mile: 1234, limit: 40}], <<>>}
+    end
 
-  test "parses Heartbeat correctly" do
-    parse_result =
-      "41"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+    test "decodes IAmDispatcher correctly" do
+      decode_result =
+        "81010042"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result == {%Type.Heartbeat{}, <<>>}
-  end
+      assert decode_result == {[%Request.IAmDispatcher{roads: [66]}], <<>>}
 
-  test "parses IAmCamera correctly" do
-    parse_result =
-      "8000420064003c"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+      decode_result2 =
+        "8103004201701388"
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result == {%Type.IAmCamera{road: 66, mile: 100, limit: 60}, <<>>}
+      assert decode_result2 == {[%Request.IAmDispatcher{roads: [5000, 368, 66]}], <<>>}
+    end
 
-    parse_result2 =
-      "80017004d20028"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+    test "decodes couple of messages in a row" do
+      decode_result =
+        "81010042"
+        |> Kernel.<>("8103004201701388")
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    assert parse_result2 == {%Type.IAmCamera{road: 368, mile: 1234, limit: 40}, <<>>}
-  end
+      expected_result =
+        {[%Request.IAmDispatcher{roads: [66]}, %Request.IAmDispatcher{roads: [5000, 368, 66]}],
+         <<>>}
 
-  test "parses IAmDispatcher correctly" do
-    parse_result =
-      "81010042"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+      assert decode_result == expected_result
+    end
 
-    assert parse_result == {%Type.IAmDispatcher{roads: [66]}, <<>>}
+    test "decodes couple of messages in a row and provides leftover" do
+      decode_result =
+        "81010042"
+        |> Kernel.<>("8103004201701388")
+        |> Kernel.<>("64543265")
+        |> Base.decode16!(case: :lower)
+        |> Request.decode()
 
-    parse_result2 =
-      "8103004201701388"
-      |> Base.decode16!(case: :lower)
-      |> SpeedDaemon.parse()
+      expected_result =
+        {[%Request.IAmDispatcher{roads: [66]}, %Request.IAmDispatcher{roads: [5000, 368, 66]}],
+         <<100, 84, 50, 101>>}
 
-    assert parse_result2 == {%Type.IAmDispatcher{roads: [5000, 368, 66]}, <<>>}
+      assert decode_result == expected_result
+    end
   end
 end

@@ -16,4 +16,12 @@ defmodule ProtoHackers.Utils do
 
   @spec id(value) :: value when value: any()
   def id(v), do: v
+
+  @spec maybe_session_pid(socket :: :gen_tcp.socket(), registry :: atom()) :: {:ok, pid()} | nil
+  def maybe_session_pid(socket, registry) do
+    case Registry.lookup(registry, socket) do
+      [] -> nil
+      [{pid, _}] -> {:ok, pid}
+    end
+  end
 end

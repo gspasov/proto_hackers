@@ -1,126 +1,169 @@
 defmodule ProtoHackers.SpeedDaemon do
-  alias ProtoHackers.SpeedDaemon.Type
+  use FunServer
+  use TypedStruct
 
-  defmodule Type do
-    use TypedStruct
+  alias ProtoHackers.TcpServer
+  alias ProtoHackers.SpeedDaemon.OverWatch
+  alias ProtoHackers.SpeedDaemon.OverWatch.Snapshot
+  alias ProtoHackers.SpeedDaemon.State
+  alias ProtoHackers.SpeedDaemon.Ticket
+  alias ProtoHackers.SpeedDaemon.Request
+  alias ProtoHackers.SpeedDaemon.Request.Heartbeat
+  alias ProtoHackers.SpeedDaemon.Request.Plate
+  alias ProtoHackers.SpeedDaemon.Request.WantHeartbeat
+  alias ProtoHackers.SpeedDaemon.Request.IAmDispatcher
+  alias ProtoHackers.SpeedDaemon.Request.IAmCamera
+  alias ProtoHackers.Utils
 
-    alias ProtoHackers.SpeedDaemon.Type.IAmDispatcher
-    alias ProtoHackers.SpeedDaemon.Type.IAmCamera
-    alias ProtoHackers.SpeedDaemon.Type.Heartbeat
-    alias ProtoHackers.SpeedDaemon.Type.WantHeartbeat
-    alias ProtoHackers.SpeedDaemon.Type.Ticket
-    alias ProtoHackers.SpeedDaemon.Type.Plate
-    alias ProtoHackers.SpeedDaemon.Type.Error
+  @behaviour TcpServer.Behaviour
 
-    @type t :: Error | Plate | Ticket | WantHeartbeat | Heartbeat | IAmCamera | IAmDispatcher
+  @type road :: non_neg_integer()
+  @type plate :: String.t()
 
-    typedstruct module: Error, enforce: true do
-      field :message, String.t()
-    end
+  require Logger
 
-    typedstruct module: Plate, enforce: true do
-      field :plate, String.t()
-      field :timestamp, non_neg_integer()
-    end
+  typedstruct module: State do
+    field :tcp_socket, :gen_tcp.socket(), required: true
+    field :packet, binary(), required: true
+    field :type, :camera | :dispatcher
+    field :heartbeat, non_neg_integer()
+    field :camera, IAmCamera
+    field :dispatcher, IAmDispatcher
+  end
 
-    typedstruct module: Ticket, enforce: true do
-      field :plate, String.t()
-      field :road, non_neg_integer()
-      field :mile1, non_neg_integer()
-      field :timestamp1, non_neg_integer()
-      field :mile2, non_neg_integer()
-      field :timestamp2, non_neg_integer()
-      field :speed, non_neg_integer()
-    end
+  def dynamic_supervisor_name, do: DynamicSupervisor.SpeedDaemon
+  def registry_name, do: Registry.SpeedDaemon
 
-    typedstruct module: WantHeartbeat, required: true do
-      field :interval, non_neg_integer()
-    end
+  def start_link(tcp_socket) do
+    FunServer.start_link(
+      __MODULE__,
+      [name: {:via, Registry, {registry_name(), tcp_socket}}],
+      fn -> {:ok, %State{packet: <<>>, tcp_socket: tcp_socket}} end
+    )
+  end
 
-    typedstruct module: Heartbeat do
-    end
+  @impl true
+  def on_tcp_connect(socket) do
+    case DynamicSupervisor.start_child(dynamic_supervisor_name(), {__MODULE__, socket}) do
+      {:ok, _} ->
+        Logger.debug("[#{__MODULE__}] New Client Connection #{inspect(socket)}")
 
-    typedstruct module: IAmCamera, required: true do
-      field :road, non_neg_integer()
-      field :mile, non_neg_integer()
-      field :limit, non_neg_integer()
-    end
+      {:error, reason} ->
+        Logger.error("[#{__MODULE__}] Stopping client #{inspect(socket)} with #{inspect(reason)}")
 
-    typedstruct module: IAmDispatcher, required: true do
-      field :roads, [non_neg_integer()]
+        TcpServer.close(socket)
     end
   end
 
-  @spec parse(binary()) :: {Type.t() | :end, binary()}
-  def parse(<<16, length::unsigned-integer-8, msg::binary-size(length), rest::binary>>) do
-    {%Type.Error{message: msg}, rest}
+  @impl true
+  def on_tcp_receive(socket, packet) do
+    {:ok, pid} = Utils.maybe_session_pid(socket, registry_name())
+    handle_packet(pid, packet)
   end
 
-  def parse(<<
-        32,
-        length::unsigned-integer-8,
-        plate::binary-size(length),
-        timestamp::unsigned-integer-32,
-        rest::binary
-      >>) do
-    {%Type.Plate{plate: plate, timestamp: timestamp}, rest}
+  @impl true
+  def on_tcp_close(socket) do
+    case Utils.maybe_session_pid(socket, registry_name()) do
+      nil ->
+        Logger.error("[#{__MODULE__}] Unable to find Session for socket #{inspect(socket)}")
+
+      {:ok, pid} ->
+        Logger.warn(
+          "[#{__MODULE__}] Stopping Session #{inspect(pid)} for socket #{inspect(socket)}"
+        )
+
+        stop(pid)
+    end
   end
 
-  def parse(<<
-        33,
-        length::unsigned-integer-8,
-        plate::binary-size(length),
-        road::unsigned-integer-16,
-        mile1::unsigned-integer-16,
-        timestamp1::unsigned-integer-32,
-        mile2::unsigned-integer-16,
-        timestamp2::unsigned-integer-32,
-        speed::unsigned-integer-16,
-        rest::binary
-      >>) do
-    {%Type.Ticket{
-       plate: plate,
-       road: road,
-       mile1: mile1,
-       timestamp1: timestamp1,
-       mile2: mile2,
-       timestamp2: timestamp2,
-       speed: speed
-     }, rest}
+  def stop(server) do
+    FunServer.async(server, fn %State{type: type, dispatcher: dispatcher} = state ->
+      if type == :dispatcher do
+        OverWatch.Bus.broadcast_dispatcher_close(self(), dispatcher)
+      end
+
+      {:stop, :normal, state}
+    end)
   end
 
-  def parse(<<64, interval::unsigned-integer-32, rest::binary>>) do
-    {%Type.WantHeartbeat{interval: interval}, rest}
-  end
+  def handle_packet(server, packet) do
+    FunServer.async(server, fn %State{packet: leftover_packet} = state ->
+      new_leftover_packet =
+        case Request.decode(leftover_packet <> packet) do
+          {[], new_leftover} ->
+            new_leftover
 
-  def parse(<<65, rest::binary>>) do
-    {%Type.Heartbeat{}, rest}
-  end
-
-  def parse(<<
-        128,
-        road::unsigned-integer-16,
-        mile::unsigned-integer-16,
-        limit::unsigned-integer-16,
-        rest::binary
-      >>) do
-    {%Type.IAmCamera{road: road, mile: mile, limit: limit}, rest}
-  end
-
-  def parse(<<129, num_roads::unsigned-integer-8, bin_roads::binary>>) do
-    {roads, rest} =
-      Enum.reduce(
-        1..num_roads,
-        {[], bin_roads},
-        fn _, {roads, <<road::unsigned-integer-16, acc::binary>>} ->
-          {[road | roads], acc}
+          {requests, new_leftover} ->
+            Enum.each(requests, fn request -> handle_request(server, request) end)
+            new_leftover
         end
-      )
 
-    {%Type.IAmDispatcher{roads: roads}, rest}
+      {:noreply, %{state | packet: new_leftover_packet}}
+    end)
   end
 
-  def parse(binary) do
-    {:end, binary}
+  def handle_request(server, %WantHeartbeat{interval: interval}) do
+    FunServer.async(server, fn state ->
+      interval_in_milliseconds = deciseconds_to_milliseconds(interval)
+      Process.send_after(self(), :heartbeat, interval_in_milliseconds)
+      {:noreply, %State{state | heartbeat: interval_in_milliseconds}}
+    end)
   end
+
+  def handle_request(server, %IAmCamera{} = camera) do
+    FunServer.async(server, fn state ->
+      {:noreply, %State{state | type: :camera, camera: camera}}
+    end)
+  end
+
+  def handle_request(server, %IAmDispatcher{} = dispatcher) do
+    FunServer.async(server, fn state ->
+      OverWatch.Bus.broadcast_dispatcher(self(), dispatcher)
+      Ticket.Bus.subscribe(self())
+      {:noreply, %State{state | type: :dispatcher, dispatcher: dispatcher}}
+    end)
+  end
+
+  def handle_request(server, %Plate{} = plate) do
+    FunServer.async(server, fn
+      %State{type: :camera, camera: camera} = state ->
+        OverWatch.Bus.broadcast_snapshot(%Snapshot{camera: camera, plate: plate})
+        {:noreply, state}
+
+      %State{type: non_camera_type, tcp_socket: tcp_socket} = state ->
+        TcpServer.send(
+          tcp_socket,
+          Request.encode(%Request.Error{
+            message:
+              "Only 'camera' clients can accept a Plate request, got: #{inspect(non_camera_type)}"
+          })
+        )
+
+        {:noreply, state}
+    end)
+  end
+
+  @impl true
+  def handle_info(:heartbeat, %{tcp_socket: socket, heartbeat: interval} = state) do
+    Process.send_after(self(), :heartbeat, interval)
+    TcpServer.send(socket, Request.encode(%Heartbeat{}))
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(
+        {Ticket.Bus, %Request.Ticket{} = ticket},
+        %State{type: :dispatcher, tcp_socket: socket} = state
+      ) do
+    TcpServer.send(socket, Request.encode(ticket))
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({Ticket.Bus, unexpected_message}, state) do
+    Logger.warn("[#{__MODULE__}] Got unexpected message: #{inspect(unexpected_message)}")
+    {:noreply, state}
+  end
+
+  defp deciseconds_to_milliseconds(interval), do: interval * 100
 end

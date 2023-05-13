@@ -8,21 +8,24 @@ defmodule ProtoHackers.BudgetChat.Bus do
 
   alias ProtoHackers.BudgetChat.Bus.Message
   alias ProtoHackers.BudgetChat.MessageBuilder
+  alias ProtoHackers.SimpleBus
+
+  @behaviour SimpleBus
 
   typedstruct module: Message, enforce: true do
     field :username, String.t()
     field :message, String.t()
   end
 
-  @spec subscribe() :: :ok
+  @impl true
   def subscribe() do
     :pg.join(name(), self())
   end
 
-  @spec unsubscribe() :: :ok
+  @impl true
   def unsubscribe(), do: :pg.leave(name(), self())
 
-  @spec broadcast(message :: Message.t()) :: :ok
+  @impl true
   def broadcast(message) do
     name()
     |> :pg.get_members()

@@ -9,6 +9,7 @@ defmodule ProtoHackers.BudgetChat do
   alias ProtoHackers.TcpServer
   alias ProtoHackers.BudgetChat.State
   alias ProtoHackers.BudgetChat.Bus
+  alias ProtoHackers.Utils
 
   @behaviour TcpServer.Behaviour
 
@@ -53,13 +54,13 @@ defmodule ProtoHackers.BudgetChat do
 
   @impl true
   def on_tcp_receive(socket, packet) do
-    {:ok, pid} = maybe_session_pid(socket)
+    {:ok, pid} = Utils.maybe_session_pid(socket, registry_name())
     handle_packet(pid, packet)
   end
 
   @impl true
   def on_tcp_close(socket) do
-    case maybe_session_pid(socket) do
+    case Utils.maybe_session_pid(socket, registry_name()) do
       nil ->
         Logger.error("[#{__MODULE__}] Unable to find Session for socket #{inspect(socket)}")
 
@@ -197,13 +198,6 @@ defmodule ProtoHackers.BudgetChat do
     request
     |> String.replace("\n", "")
     |> String.replace("\r", "")
-  end
-
-  defp maybe_session_pid(socket) do
-    case Registry.lookup(registry_name(), socket) do
-      [] -> nil
-      [{pid, _}] -> {:ok, pid}
-    end
   end
 
   defp end_of_request?(packet), do: String.last(packet) == "\n"

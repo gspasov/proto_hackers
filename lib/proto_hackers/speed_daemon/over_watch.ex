@@ -147,11 +147,6 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
               dispatcher_clients
               |> Enum.find(:not_found, fn {dispatcher_road, _} -> dispatcher_road == road end)
-              |> tap(fn dispatcher_for_road ->
-                Logger.debug(
-                  "[#{__MODULE__}] Found Dispatcher for violation: #{inspect(dispatcher_for_road)}"
-                )
-              end)
               |> case do
                 :not_found ->
                   violation
@@ -225,7 +220,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       })
     else
       {:speeding?, false} ->
-        Logger.debug("[#{__MODULE__}] Car is within speed limits")
+        # Logger.debug("[#{__MODULE__}] Car is within speed limits")
         nil
 
       {:ticketed?, true} ->

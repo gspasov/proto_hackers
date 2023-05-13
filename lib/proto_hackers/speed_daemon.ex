@@ -69,10 +69,6 @@ defmodule ProtoHackers.SpeedDaemon do
         Logger.error("[#{__MODULE__}] Unable to find Session for socket #{inspect(socket)}")
 
       {:ok, pid} ->
-        Logger.warn(
-          "[#{__MODULE__}] Stopping Session #{inspect(pid)} for socket #{inspect(socket)}"
-        )
-
         stop(pid)
     end
   end
@@ -88,21 +84,13 @@ defmodule ProtoHackers.SpeedDaemon do
   end
 
   def handle_packet(server, packet) do
-    FunServer.async(server, fn %State{packet: leftover_packet, tcp_socket: socket} = state ->
+    FunServer.async(server, fn %State{packet: leftover_packet} = state ->
       new_leftover_packet =
         case Request.decode(leftover_packet <> packet) do
           {[], new_leftover} ->
-            Logger.debug(
-              "[#{__MODULE__}] #{inspect(socket)} No Parsed Requests with leftover #{inspect(new_leftover)}"
-            )
-
             new_leftover
 
           {requests, new_leftover} ->
-            Logger.debug(
-              "[#{__MODULE__}] #{inspect(socket)} Parsed requests #{inspect(requests)}"
-            )
-
             Enum.each(requests, fn request ->
               handle_request(server, request)
             end)
@@ -181,10 +169,6 @@ defmodule ProtoHackers.SpeedDaemon do
         {Ticket.Bus, %Request.Ticket{} = ticket},
         %State{type: :dispatcher, tcp_socket: socket} = state
       ) do
-    Logger.debug(
-      "[#{__MODULE__}] Received Ticket to send to socket #{inspect(socket)} - #{inspect(ticket)}"
-    )
-
     TcpServer.send(socket, Request.encode(ticket))
     {:noreply, state}
   end

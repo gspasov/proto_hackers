@@ -135,9 +135,11 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           {new_snapshots, violations}
 
         old_snapshot ->
+          {earlier_snapshot, later_snapshot} = order_snapshots(old_snapshot, new_snapshot)
+
           new_violations =
-            old_snapshot
-            |> maybe_violation(new_snapshot, violations)
+            earlier_snapshot
+            |> maybe_violation(later_snapshot, violations)
             |> Maybe.fmap(fn %Violation{ticket: ticket} = violation ->
               # If there is available Dispatcher, broadcast the Ticket to one Dispatcher.
               # Otherwise just store the Ticket as 'generated'.

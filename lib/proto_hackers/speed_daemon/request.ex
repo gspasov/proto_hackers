@@ -13,6 +13,9 @@ defmodule ProtoHackers.SpeedDaemon.Request do
   @type outbound :: Error.t() | Ticket.t() | Heartbeat.t()
   @type inbound :: Plate.t() | WantHeartbeat.t() | IAmCamera.t() | IAmDispatcher.t()
 
+  @road_size_bits 16
+  @binary_size_bits 8
+
   typedstruct module: Error, enforce: true do
     field :message, String.t()
   end
@@ -122,25 +125,29 @@ defmodule ProtoHackers.SpeedDaemon.Request do
     do_decode(rest, acc ++ [%IAmCamera{road: road, mile: mile, limit: limit}])
   end
 
-  defp do_decode(<<129, num_roads::unsigned-integer-8, rest::binary>> = request, acc) do
-    expected_roads_size = num_roads * 16
+  defp do_decode(
+         <<
+           129,
+           num_roads::unsigned-integer-8,
+           bin_roads::binary-size(num_roads * floor(@road_size_bits / @binary_size_bits)),
+           rest::binary
+         >>,
+         acc
+       ) do
+    {roads, <<>>} =
+      Enum.reduce(
+        1..num_roads,
+        {[], bin_roads},
+        fn _, {roads, <<road::unsigned-integer-16, acc::binary>>} ->
+          {[road | roads], acc}
+        end
+      )
 
-    case rest do
-      <<bin_roads::binary-size(expected_roads_size), leftover::binary>> ->
-        {roads, <<>>} =
-          Enum.reduce(
-            1..num_roads,
-            {[], bin_roads},
-            fn _, {roads, <<road::unsigned-integer-16, acc::binary>>} ->
-              {[road | roads], acc}
-            end
-          )
+    do_decode(rest, acc ++ [%IAmDispatcher{roads: roads}])
+  end
 
-        do_decode(leftover, acc ++ [%IAmDispatcher{roads: roads}])
-
-      _ ->
-        {acc, request}
-    end
+  defp do_decode(<<129, _::binary>> = request, acc) do
+    {acc, request}
   end
 
   defp do_decode(binary, acc) do

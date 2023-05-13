@@ -266,7 +266,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   defp has_been_ticketed_that_day?(day, road, plate, tickets) do
     Enum.find(tickets, false, fn
-      {{^day, ^road, ^plate, _type}, _ticket} -> true
+      {{^day, _road, ^plate, _type}, _ticket} -> true
       _ -> false
     end)
   end

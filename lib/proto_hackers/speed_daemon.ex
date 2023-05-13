@@ -178,6 +178,10 @@ defmodule ProtoHackers.SpeedDaemon do
         {Ticket.Bus, %Request.Ticket{} = ticket},
         %State{type: :dispatcher, tcp_socket: socket} = state
       ) do
+    Logger.debug(
+      "[#{__MODULE__}] Received Ticket to send to socket #{inspect(socket)} - #{inspect(ticket)}"
+    )
+
     TcpServer.send(socket, Request.encode(ticket))
     {:noreply, state}
   end

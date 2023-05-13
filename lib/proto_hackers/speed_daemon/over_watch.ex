@@ -70,7 +70,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       Enum.into(tickets, %{}, fn
         {{day, road, plate, :pending}, ticket} = ticket_data ->
           if Enum.any?(roads, fn r -> r == road end) do
-            Logger.debug("[#{__MODULE__}] Send ticket #{inspect(ticket)}")
+            Logger.debug("[#{__MODULE__}] Send ticket #{inspect(ticket)} On Day #{day}")
             Ticket.Bus.broadcast(dispatcher_client, ticket)
             {{day, road, plate, :done}, ticket}
           else
@@ -215,7 +215,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       |> case do
         [] ->
           Logger.debug(
-            "[#{__MODULE__}] The car is already ticketed for all days between #{start_day} and #{end_day}"
+            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}, #{tickets}"
           )
 
           nil

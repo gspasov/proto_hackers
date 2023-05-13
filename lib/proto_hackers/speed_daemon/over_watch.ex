@@ -55,7 +55,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {dispatcher_client, %IAmDispatcher{roads: roads}}} = dispatcher,
+        {OverWatch.Bus, {dispatcher_client, %IAmDispatcher{roads: roads}} = dispatcher},
         %State{dispatcher_clients: dispatcher_clients, tickets: tickets} = state
       )
       when is_pid(dispatcher_client) do
@@ -107,6 +107,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
         {_key, nil} -> true
         _ -> false
       end)
+      |> Enum.into(%{})
 
     {:noreply, %State{state | dispatcher_clients: left_dispatchers}}
   end

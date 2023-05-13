@@ -244,10 +244,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
   defp order_snapshots(snapshot1, snapshot2)
 
   defp order_snapshots(
-         %Snapshot{plate: %Plate{timestamp: timestamp1}} = snapshot1,
-         %Snapshot{plate: %Plate{timestamp: timestamp2}} = snapshot2
+         %Snapshot{camera: %IAmCamera{mile: mile1}} = snapshot1,
+         %Snapshot{camera: %IAmCamera{mile: mile2}} = snapshot2
        )
-       when timestamp1 > timestamp2 do
+       when mile1 > mile2 do
     {snapshot2, snapshot1}
   end
 

@@ -99,9 +99,7 @@ defmodule ProtoHackers.SpeedDaemon do
             new_leftover
 
           {requests, new_leftover} ->
-            Logger.debug(
-              "[#{__MODULE__}] Parsed requests #{inspect(requests)}\nLeftover: #{inspect(new_leftover)}"
-            )
+            Logger.debug("[#{__MODULE__}] Parsed requests #{inspect(requests)}")
 
             Enum.each(requests, fn request ->
               handle_request(server, request)

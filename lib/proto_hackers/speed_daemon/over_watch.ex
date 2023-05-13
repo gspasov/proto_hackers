@@ -55,14 +55,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {dispatcher_client, %IAmDispatcher{roads: roads}} = dispatcher},
+        {OverWatch.Bus, {dispatcher_client, %IAmDispatcher{roads: roads}}},
         %State{dispatcher_clients: dispatcher_clients, tickets: tickets} = state
       )
       when is_pid(dispatcher_client) do
-    Logger.debug(
-      "[#{__MODULE__}] Incoming Dispatcher #{inspect(dispatcher)}\nState: #{inspect(state)}"
-    )
-
     new_dispatchers =
       Enum.reduce(roads, dispatcher_clients, fn road, acc ->
         Map.update(acc, road, [dispatcher_client], fn dispatcher_clients ->
@@ -74,6 +70,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       Enum.into(tickets, %{}, fn
         {{day, road, plate, :pending}, ticket} = ticket_data ->
           if Enum.any?(roads, fn r -> r == road end) do
+            Logger.debug("[#{__MODULE__}] Send ticket #{inspect(ticket)}")
             Ticket.Bus.broadcast(dispatcher_client, ticket)
             {{day, road, plate, :done}, ticket}
           else
@@ -89,14 +86,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {:close, dispatcher_client, %IAmDispatcher{roads: roads} = dispatcher}},
+        {OverWatch.Bus, {:close, dispatcher_client, %IAmDispatcher{roads: roads}}},
         %State{dispatcher_clients: dispatcher_clients} = state
       )
       when is_pid(dispatcher_client) do
-    Logger.debug(
-      "[#{__MODULE__}] Closing Dispatcher #{inspect(dispatcher)}\nState: #{inspect(state)}"
-    )
-
     left_dispatchers =
       roads
       |> Enum.reduce(dispatcher_clients, fn road, acc ->
@@ -125,10 +118,6 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           dispatcher_clients: dispatcher_clients
         } = state
       ) do
-    Logger.debug(
-      "[#{__MODULE__}] Incoming Snapshot #{inspect(snapshot1)}\nState: #{inspect(state)}"
-    )
-
     {new_observed_plates, new_tickets} =
       case Map.get(observed_plates, {road, plate_text}) do
         nil ->
@@ -155,7 +144,11 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
                   end)
 
                 {_key, [client | _clients]} when is_pid(client) ->
-                  Enum.each(tickets, fn {_day, ticket} ->
+                  Enum.each(tickets, fn {day, ticket} ->
+                    Logger.debug(
+                      "[#{__MODULE__}] On Day #{day} sending Ticket #{inspect(ticket)}"
+                    )
+
                     Ticket.Bus.broadcast_ticket(client, ticket)
                   end)
 
@@ -196,7 +189,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
     end_day = calculate_day(timestamp2)
     mph = calculate_mph(first_snapshot, second_snapshot)
 
-    if should_ticket?(mph, limit) do
+    unless speeding?(mph, limit) do
+      Logger.debug("[#{__MODULE__}] Should not ticket for speed #{mph}")
+      nil
+    else
       Enum.reduce(start_day..end_day, [], fn day, acc ->
         if has_been_ticketed_that_day?(day, road, plate, tickets) do
           acc
@@ -227,9 +223,6 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
         tickets ->
           Maybe.pure(tickets)
       end
-    else
-      Logger.debug("[#{__MODULE__}] Should not ticket for speed #{mph}")
-      nil
     end
   end
 
@@ -246,7 +239,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   defp order_snapshots(snapshot1, snapshot2), do: {snapshot1, snapshot2}
 
-  defp should_ticket?(speed, limit), do: speed - limit * 100 > @allowed_mph_overhead
+  defp speeding?(speed, limit), do: speed - limit * 100 > @allowed_mph_overhead
 
   defp calculate_mph(
          %Snapshot{

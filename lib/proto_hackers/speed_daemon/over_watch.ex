@@ -166,8 +166,15 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
                   %Violation{violation | type: :done}
               end
             end)
-            |> Maybe.fold(violations, fn new_violation ->
-              Map.merge(violations, %{{road, plate_text} => new_violation})
+            |> Maybe.fold(violations, fn %Violation{days: new_days} = new_violation ->
+              Map.update(
+                violations,
+                {road, plate_text},
+                new_violation,
+                fn %Violation{days: old_days} ->
+                  %Violation{new_violation | days: old_days ++ new_days}
+                end
+              )
             end)
 
           {snapshots, new_violations}
@@ -197,37 +204,27 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       ) do
     start_day = calculate_day(timestamp1)
     end_day = calculate_day(timestamp2)
+    days_to_ticket = Enum.to_list(start_day..end_day)
     mph = calculate_mph(first_snapshot, second_snapshot)
 
-    unless speeding?(mph, limit) do
-      Logger.debug("[#{__MODULE__}] Should not ticket for speed #{mph}")
-      nil
+    if speeding?(mph, limit) and
+         not has_been_ticketed_these_days?(days_to_ticket, plate, violations) do
+      Maybe.pure(%Violation{
+        type: :pending,
+        days: days_to_ticket,
+        ticket: %Request.Ticket{
+          mile1: mile1,
+          mile2: mile2,
+          road: road,
+          plate: plate,
+          speed: mph,
+          timestamp1: timestamp1,
+          timestamp2: timestamp2
+        }
+      })
     else
-      start_day..end_day
-      |> Enum.reject(fn day -> has_been_ticketed_that_day?(day, plate, violations) end)
-      |> case do
-        [] ->
-          Logger.debug(
-            "[#{__MODULE__}] Plate #{plate} in road #{road} already ticketed between #{start_day} and #{end_day}"
-          )
-
-          nil
-
-        days ->
-          Maybe.pure(%Violation{
-            type: :pending,
-            days: days,
-            ticket: %Request.Ticket{
-              mile1: mile1,
-              mile2: mile2,
-              road: road,
-              plate: plate,
-              speed: mph,
-              timestamp1: timestamp1,
-              timestamp2: timestamp2
-            }
-          })
-      end
+      Logger.debug("[#{__MODULE__}] Should not ticket #{plate}")
+      nil
     end
   end
 
@@ -271,10 +268,13 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   defp calculate_day(timestamp), do: Kernel.floor(timestamp / @day_length)
 
-  defp has_been_ticketed_that_day?(day, plate, violations) do
-    Enum.find(violations, false, fn
-      {{_road, ^plate}, %Violation{days: days}} -> Enum.any?(days, fn d -> d == day end)
-      _ -> false
+  defp has_been_ticketed_these_days?(days_to_ticket, plate, violations) do
+    Enum.any?(violations, fn
+      {{_road, ^plate}, %Violation{days: ticketed_days}} ->
+        Enum.any?(days_to_ticket, fn day -> Enum.member?(ticketed_days, day) end)
+
+      _ ->
+        false
     end)
   end
 end

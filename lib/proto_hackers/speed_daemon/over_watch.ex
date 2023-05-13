@@ -223,7 +223,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
         }
       })
     else
-      Logger.debug("[#{__MODULE__}] Should not ticket #{plate}")
+      Logger.debug(
+        "[#{__MODULE__}] Should not ticket #{plate} violation: #{Enum.find(violations, fn {key, _val} -> key == {road, plate} end)}"
+      )
+
       nil
     end
   end
@@ -271,6 +274,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
   defp has_been_ticketed_these_days?(days_to_ticket, plate, violations) do
     Enum.any?(violations, fn
       {{_road, ^plate}, %Violation{days: ticketed_days}} ->
+        # Car should not be ticketed for days that span previous ticket
         Enum.any?(days_to_ticket, fn day -> Enum.member?(ticketed_days, day) end)
 
       _ ->

@@ -244,10 +244,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
   defp order_snapshots(snapshot1, snapshot2)
 
   defp order_snapshots(
-         %Snapshot{camera: %IAmCamera{mile: mile1}} = snapshot1,
-         %Snapshot{camera: %IAmCamera{mile: mile2}} = snapshot2
+         %Snapshot{plate: %Plate{timestamp: timestamp1}} = snapshot1,
+         %Snapshot{plate: %Plate{timestamp: timestamp2}} = snapshot2
        )
-       when mile1 > mile2 do
+       when timestamp1 > timestamp2 do
     {snapshot2, snapshot1}
   end
 
@@ -266,7 +266,9 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
          }
        ) do
     distance = if mile1 > mile2, do: mile1 - mile2, else: mile2 - mile1
-    time_in_seconds = if mile1 > mile2, do: timestamp1 - timestamp2, else: timestamp2 - timestamp1
+
+    time_in_seconds =
+      if timestamp1 > timestamp2, do: timestamp1 - timestamp2, else: timestamp2 - timestamp1
 
     distance
     |> Kernel./(seconds_to_hours(time_in_seconds))

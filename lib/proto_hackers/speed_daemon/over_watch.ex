@@ -172,7 +172,8 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
               )
             end)
 
-          {snapshots, new_violations}
+          new_snapshots = Map.put(snapshots, {road, plate_text}, later_snapshot)
+          {new_snapshots, new_violations}
       end
 
     {:noreply, %State{state | snapshots: new_snapshots, violations: new_violations}}

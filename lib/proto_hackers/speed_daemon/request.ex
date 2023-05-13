@@ -122,17 +122,25 @@ defmodule ProtoHackers.SpeedDaemon.Request do
     do_decode(rest, acc ++ [%IAmCamera{road: road, mile: mile, limit: limit}])
   end
 
-  defp do_decode(<<129, num_roads::unsigned-integer-8, bin_roads::binary>>, acc) do
-    {roads, rest} =
-      Enum.reduce(
-        1..num_roads,
-        {[], bin_roads},
-        fn _, {roads, <<road::unsigned-integer-16, acc::binary>>} ->
-          {[road | roads], acc}
-        end
-      )
+  defp do_decode(<<129, num_roads::unsigned-integer-8, rest::binary>> = request, acc) do
+    expected_roads_size = num_roads * 16
 
-    do_decode(rest, acc ++ [%IAmDispatcher{roads: roads}])
+    case rest do
+      <<bin_roads::binary-size(expected_roads_size), leftover::binary>> ->
+        {roads, <<>>} =
+          Enum.reduce(
+            1..num_roads,
+            {[], bin_roads},
+            fn _, {roads, <<road::unsigned-integer-16, acc::binary>>} ->
+              {[road | roads], acc}
+            end
+          )
+
+        do_decode(leftover, acc ++ [%IAmDispatcher{roads: roads}])
+
+      _ ->
+        {acc, request}
+    end
   end
 
   defp do_decode(binary, acc) do

@@ -148,7 +148,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
                   %{{road, plate_text} => violation}
 
                 {_key, [client | _clients]} when is_pid(client) ->
-                  Enum.each(violations, fn %Violation{ticket: ticket} ->
+                  Enum.each(violations, fn {_key, %Violation{ticket: ticket}} ->
                     Logger.debug("[#{__MODULE__}] Sending Ticket #{inspect(ticket)}")
 
                     Ticket.Bus.broadcast_ticket(client, ticket)

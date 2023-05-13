@@ -88,18 +88,20 @@ defmodule ProtoHackers.SpeedDaemon do
   end
 
   def handle_packet(server, packet) do
-    FunServer.async(server, fn %State{packet: leftover_packet} = state ->
+    FunServer.async(server, fn %State{packet: leftover_packet, tcp_socket: socket} = state ->
       new_leftover_packet =
         case Request.decode(leftover_packet <> packet) do
           {[], new_leftover} ->
             Logger.debug(
-              "[#{__MODULE__}] No Parsed Requests with leftover #{inspect(new_leftover)}"
+              "[#{__MODULE__}] #{inspect(socket)} No Parsed Requests with leftover #{inspect(new_leftover)}"
             )
 
             new_leftover
 
           {requests, new_leftover} ->
-            Logger.debug("[#{__MODULE__}] Parsed requests #{inspect(requests)}")
+            Logger.debug(
+              "[#{__MODULE__}] #{inspect(socket)} Parsed requests #{inspect(requests)}"
+            )
 
             Enum.each(requests, fn request ->
               handle_request(server, request)

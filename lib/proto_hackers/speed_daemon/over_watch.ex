@@ -149,9 +149,18 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
               # It will be send as soon as a Dispatcher for that road appears.
 
               dispatcher_clients
-              |> Enum.find(fn {dispatcher_road, _} -> dispatcher_road == road end)
+              |> Enum.find(:not_found, fn {dispatcher_road, _} -> dispatcher_road == road end)
+              |> tap(fn dispatcher_for_road ->
+                Logger.debug(
+                  "[#{__MODULE__}] Found Dispatcher for violation: #{inspect(dispatcher_for_road)}"
+                )
+
+                Logger.debug(
+                  "[#{__MODULE__}] Dispatchers in state #{inspect(dispatcher_clients)}"
+                )
+              end)
               |> case do
-                nil ->
+                :not_found ->
                   %{{road, plate_text} => violation}
 
                 {_key, [client | _clients]} when is_pid(client) ->

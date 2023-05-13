@@ -207,8 +207,9 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
     days_to_ticket = Enum.to_list(start_day..end_day)
     mph = calculate_mph(first_snapshot, second_snapshot)
 
-    if speeding?(mph, limit) and
-         not has_been_ticketed_these_days?(days_to_ticket, plate, violations) do
+    with {_, true} <- {:speeding?, speeding?(mph, limit)},
+         {_, false} <-
+           {:ticketed?, has_been_ticketed_these_days?(days_to_ticket, plate, violations)} do
       Maybe.pure(%Violation{
         type: :pending,
         days: days_to_ticket,
@@ -223,11 +224,16 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
         }
       })
     else
-      Logger.debug(
-        "[#{__MODULE__}] Should not ticket #{plate} violation: #{inspect(Enum.find(violations, fn {key, _val} -> key == {road, plate} end))}"
-      )
+      {:speeding?, false} ->
+        Logger.debug("[#{__MODULE__}] Car is within speed limits")
+        nil
 
-      nil
+      {:ticketed?, true} ->
+        Logger.debug(
+          "[#{__MODULE__}] Plate #{plate} already ticketed for days: #{inspect(days_to_ticket)} with previous violation: #{inspect(Enum.find(violations, fn {key, _val} -> key == {road, plate} end))}"
+        )
+
+        nil
     end
   end
 

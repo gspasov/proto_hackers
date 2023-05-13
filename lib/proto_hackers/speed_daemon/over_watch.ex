@@ -24,6 +24,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @type day :: non_neg_integer()
   @type violations :: %{{SpeedDaemon.road(), SpeedDaemon.plate()} => Violation.t()}
+  @type snapshots :: %{{SpeedDaemon.road(), SpeedDaemon.plate()} => Snapshot.t()}
 
   @day_length 86_400
   @seconds_in_an_hour 3600
@@ -42,11 +43,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   typedstruct module: State do
     field :dispatcher_clients, %{SpeedDaemon.road() => [pid()]}, default: %{}
-
-    field :observed_plates,
-          %{{SpeedDaemon.road(), SpeedDaemon.plate()} => Snapshot.t()},
-          default: %{}
-
+    field :snapshots, OverWatch.snapshots(), default: %{}
     field :violations, OverWatch.violations(), default: %{}
   end
 
@@ -77,7 +74,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
         {{road, _plate} = key, %Violation{ticket: ticket} = violation} = ticket_data ->
           if Enum.any?(roads, fn r -> r == road end) do
             Logger.debug(
-              "[#{__MODULE__}] #{inspect(dispatcher_client)} Send[1] ticket #{inspect(ticket)}"
+              "[#{__MODULE__}] #{inspect(dispatcher_client)} Send[1] Violation #{inspect(violation)}"
             )
 
             Ticket.Bus.broadcast(dispatcher_client, ticket)
@@ -122,27 +119,25 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
          %Snapshot{
            camera: %IAmCamera{road: road},
            plate: %Plate{plate: plate_text}
-         } = snapshot1},
+         } = new_snapshot},
         %State{
-          observed_plates: observed_plates,
+          snapshots: snapshots,
           violations: violations,
           dispatcher_clients: dispatcher_clients
         } = state
       ) do
-    Logger.debug("[#{__MODULE__}] New snapshot #{inspect(snapshot1)}")
+    Logger.debug("[#{__MODULE__}] New snapshot #{inspect(new_snapshot)}")
 
-    {new_observed_plates, new_violations} =
-      case Map.get(observed_plates, {road, plate_text}) do
+    {new_snapshots, new_violations} =
+      case Map.get(snapshots, {road, plate_text}) do
         nil ->
-          new_observed_plates = Map.put(observed_plates, {road, plate_text}, snapshot1)
-          {new_observed_plates, violations}
+          new_snapshots = Map.put(snapshots, {road, plate_text}, new_snapshot)
+          {new_snapshots, violations}
 
-        snapshot2 ->
-          {first_snapshot, second_snapshot} = order_snapshots(snapshot1, snapshot2)
-
+        old_snapshot ->
           new_violations =
-            first_snapshot
-            |> maybe_violation(second_snapshot, violations)
+            old_snapshot
+            |> maybe_violation(new_snapshot, violations)
             |> Maybe.fmap(fn %Violation{ticket: ticket} = violation ->
               # If there is available Dispatcher, broadcast the Ticket to one Dispatcher.
               # Otherwise just store the Ticket as 'generated'.
@@ -154,34 +149,29 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
                 Logger.debug(
                   "[#{__MODULE__}] Found Dispatcher for violation: #{inspect(dispatcher_for_road)}"
                 )
-
-                Logger.debug(
-                  "[#{__MODULE__}] Dispatchers in state #{inspect(dispatcher_clients)}"
-                )
               end)
               |> case do
                 :not_found ->
-                  %{{road, plate_text} => violation}
+                  violation
 
                 {_key, [client | _clients]} when is_pid(client) ->
                   Logger.debug(
-                    "[#{__MODULE__}] #{inspect(client)} Send[2] Ticket #{inspect(ticket)}"
+                    "[#{__MODULE__}] #{inspect(client)} Send[2] Violation #{inspect(violation)}"
                   )
 
                   Ticket.Bus.broadcast_ticket(client, ticket)
 
-                  %{{road, plate_text} => %Violation{violation | type: :done}}
+                  %Violation{violation | type: :done}
               end
             end)
-            |> Maybe.fold(violations, fn new_violations ->
-              Map.merge(violations, new_violations)
+            |> Maybe.fold(violations, fn new_violation ->
+              Map.merge(violations, %{{road, plate_text} => new_violation})
             end)
 
-          new_observed_plates = Map.put(observed_plates, {road, plate_text}, snapshot2)
-          {new_observed_plates, new_violations}
+          {snapshots, new_violations}
       end
 
-    {:noreply, %State{state | observed_plates: new_observed_plates, violations: new_violations}}
+    {:noreply, %State{state | snapshots: new_snapshots, violations: new_violations}}
   end
 
   @impl true

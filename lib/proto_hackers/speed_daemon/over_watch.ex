@@ -224,7 +224,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
       })
     else
       Logger.debug(
-        "[#{__MODULE__}] Should not ticket #{plate} violation: #{Enum.find(violations, fn {key, _val} -> key == {road, plate} end)}"
+        "[#{__MODULE__}] Should not ticket #{plate} violation: #{inspect(Enum.find(violations, fn {key, _val} -> key == {road, plate} end))}"
       )
 
       nil

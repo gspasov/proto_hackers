@@ -55,10 +55,14 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {dispatcher_client, %IAmDispatcher{roads: roads}}},
+        {OverWatch.Bus, {dispatcher_client, %IAmDispatcher{roads: roads}}} = dispatcher,
         %State{dispatcher_clients: dispatcher_clients, tickets: tickets} = state
       )
       when is_pid(dispatcher_client) do
+    Logger.debug(
+      "[#{__MODULE__}] Incoming Dispatcher #{inspect(dispatcher)}\nState: #{inspect(state)}"
+    )
+
     new_dispatchers =
       Enum.reduce(roads, dispatcher_clients, fn road, acc ->
         Map.update(acc, road, [dispatcher_client], fn dispatcher_clients ->
@@ -85,10 +89,14 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @impl true
   def handle_info(
-        {OverWatch.Bus, {:close, dispatcher_client, %IAmDispatcher{roads: roads}}},
+        {OverWatch.Bus, {:close, dispatcher_client, %IAmDispatcher{roads: roads} = dispatcher}},
         %State{dispatcher_clients: dispatcher_clients} = state
       )
       when is_pid(dispatcher_client) do
+    Logger.debug(
+      "[#{__MODULE__}] Closing Dispatcher #{inspect(dispatcher)}\nState: #{inspect(state)}"
+    )
+
     left_dispatchers =
       roads
       |> Enum.reduce(dispatcher_clients, fn road, acc ->
@@ -116,6 +124,10 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
           dispatcher_clients: dispatcher_clients
         } = state
       ) do
+    Logger.debug(
+      "[#{__MODULE__}] Incoming Snapshot #{inspect(snapshot1)}\nState: #{inspect(state)}"
+    )
+
     {new_observed_plates, new_tickets} =
       case Map.get(observed_plates, {road, plate_text}) do
         nil ->

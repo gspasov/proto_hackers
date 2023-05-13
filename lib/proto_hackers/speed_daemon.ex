@@ -92,10 +92,21 @@ defmodule ProtoHackers.SpeedDaemon do
       new_leftover_packet =
         case Request.decode(leftover_packet <> packet) do
           {[], new_leftover} ->
+            Logger.debug(
+              "[#{__MODULE__}] No Parsed Requests with leftover #{inspect(new_leftover)}"
+            )
+
             new_leftover
 
           {requests, new_leftover} ->
-            Enum.each(requests, fn request -> handle_request(server, request) end)
+            Logger.debug(
+              "[#{__MODULE__}] Parsed requests #{inspect(requests)}\nLeftover: #{inspect(new_leftover)}"
+            )
+
+            Enum.each(requests, fn request ->
+              handle_request(server, request)
+            end)
+
             new_leftover
         end
 
@@ -147,13 +158,11 @@ defmodule ProtoHackers.SpeedDaemon do
         {:noreply, state}
 
       %State{type: non_camera_type, tcp_socket: tcp_socket} = state ->
-        TcpServer.send(
-          tcp_socket,
-          Request.encode(%Request.Error{
-            message:
-              "Only 'camera' clients can accept a Plate request, got: #{inspect(non_camera_type)}"
-          })
-        )
+        error_message =
+          "Only 'camera' clients can accept a Plate request, got: #{inspect(non_camera_type)}"
+
+        Logger.warn("[#{__MODULE__}] #{inspect(error_message)}")
+        TcpServer.send(tcp_socket, Request.encode(%Request.Error{message: error_message}))
 
         {:noreply, state}
     end)

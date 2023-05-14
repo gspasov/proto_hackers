@@ -88,7 +88,8 @@ defmodule ProtoHackers.SpeedDaemon.Request do
     >>
   end
 
-  @spec decode(input) :: {:ok, {[Request.inbound()], leftover}} | {:error, Request.outbound()}
+  @spec decode(input) ::
+          {:ok, {[Request.inbound()], leftover}} | {:error, Request.outbound() | binary()}
         when input: binary(), leftover: binary()
   def decode(binary_input)
 
@@ -185,7 +186,11 @@ defmodule ProtoHackers.SpeedDaemon.Request do
     {:ok, {acc, request}}
   end
 
-  defp do_decode(binary, acc) do
-    {:ok, {acc, binary}}
+  defp do_decode(<<>>, acc) do
+    {:ok, {acc, <<>>}}
+  end
+
+  defp do_decode(illegal_binary, _acc) do
+    {:error, illegal_binary}
   end
 end

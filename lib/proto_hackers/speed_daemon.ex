@@ -102,7 +102,7 @@ defmodule ProtoHackers.SpeedDaemon do
             TcpServer.send(
               socket,
               Request.encode(%Error{
-                message: "Cannot send Sever type requests got #{inspect(request)}"
+                message: "Received illegal request #{inspect(request)}"
               })
             )
 

@@ -1,7 +1,8 @@
 defmodule ProtoHackers.SpeedDaemon.OverWatch.Bus do
+  @moduledoc false
+
   alias ProtoHackers.SpeedDaemon.OverWatch.Snapshot
   alias ProtoHackers.SpeedDaemon.Request.IAmDispatcher
-  alias ProtoHackers.SpeedDaemon.Request.IAmCamera
   alias ProtoHackers.SimpleBus
 
   @behaviour SimpleBus

@@ -1,4 +1,6 @@
 defmodule ProtoHackers.UnusualDatabaseProgram.UdpServer do
+  @moduledoc false
+
   alias ProtoHackers.UdpServer
   alias ProtoHackers.UdpServer.Specification
   alias ProtoHackers.UnusualDatabaseProgram

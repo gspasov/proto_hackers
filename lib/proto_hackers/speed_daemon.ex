@@ -1,4 +1,6 @@
 defmodule ProtoHackers.SpeedDaemon do
+  @moduledoc false
+
   use FunServer
   use TypedStruct
 

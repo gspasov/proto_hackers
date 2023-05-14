@@ -27,7 +27,7 @@ defmodule ProtoHackersTest.SpeedDaemonTest do
           timestamp1: 123_456,
           mile2: 110,
           timestamp2: 123_816,
-          speed: 10000
+          speed: 10_000
         })
 
       assert encode_result ==

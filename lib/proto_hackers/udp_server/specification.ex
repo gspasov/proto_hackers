@@ -1,4 +1,6 @@
 defmodule ProtoHackers.UdpServer.Specification do
+  @moduledoc false
+
   use TypedStruct
 
   alias ProtoHackers.UdpServer.Specification

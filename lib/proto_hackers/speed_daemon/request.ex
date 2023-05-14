@@ -1,4 +1,9 @@
 defmodule ProtoHackers.SpeedDaemon.Request do
+  @moduledoc """
+  Describes all possible inbound and outbound request types.
+  Holds functionality for encoding and decoding incoming and outgoing requests
+  """
+
   use TypedStruct
 
   alias ProtoHackers.SpeedDaemon.Request

@@ -1,4 +1,6 @@
 defmodule ProtoHackers.SpeedDaemon.Ticket.Bus do
+  @moduledoc false
+
   alias ProtoHackers.NamedBus
   alias ProtoHackers.SpeedDaemon.Request.Ticket
 

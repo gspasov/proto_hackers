@@ -1,5 +1,5 @@
 defmodule ProtoHackers.SpeedDaemon.OverWatch do
-  @defmodule """
+  @moduledoc """
   Knows about all available cameras on all the roads. Therefore responsible for figuring out the
   speed of a plate whenever it crosses a camera.
   If the speed limit has been exceeded, it will fire a ticket Event.

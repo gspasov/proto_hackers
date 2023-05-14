@@ -1,4 +1,6 @@
 defmodule ProtoHackers.UnusualDatabaseProgram do
+  @moduledoc false
+
   use FunServer
 
   alias ProtoHackers.UdpServer

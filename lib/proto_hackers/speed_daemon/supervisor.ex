@@ -1,4 +1,6 @@
 defmodule ProtoHackers.SpeedDaemon.Supervisor do
+  @moduledoc false
+
   use Supervisor
 
   alias ProtoHackers.SpeedDaemon

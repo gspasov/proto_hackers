@@ -30,5 +30,6 @@ defmodule ProtoHackers.Utils do
   def maybe_hd(list)
 
   def maybe_hd([]), do: nil
+  def maybe_hd([{:ok, elem} | _]), do: maybe_hd([elem])
   def maybe_hd([elem | _]), do: Maybe.pure(elem)
 end

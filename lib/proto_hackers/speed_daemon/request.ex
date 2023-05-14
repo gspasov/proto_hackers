@@ -88,7 +88,8 @@ defmodule ProtoHackers.SpeedDaemon.Request do
     >>
   end
 
-  @spec decode(input) :: {[Request.inbound()], leftover} when input: binary(), leftover: binary()
+  @spec decode(input) :: {:ok, {[Request.inbound()], leftover}} | {:error, Request.outbound()}
+        when input: binary(), leftover: binary()
   def decode(binary_input)
 
   def decode(binary) do
@@ -146,11 +147,45 @@ defmodule ProtoHackers.SpeedDaemon.Request do
     do_decode(rest, acc ++ [%IAmDispatcher{roads: roads}])
   end
 
+  defp do_decode(
+         <<
+           33,
+           plate_length::unsigned-integer-8,
+           plate::binary-size(plate_length),
+           road::unsigned-integer-16,
+           mile1::unsigned-integer-16,
+           timestamp1::unsigned-integer-32,
+           mile2::unsigned-integer-16,
+           timestamp2::unsigned-integer-32,
+           speed::unsigned-integer-16
+         >>,
+         _acc
+       ) do
+    {:error,
+     %Ticket{
+       plate: plate,
+       road: road,
+       mile1: mile1,
+       timestamp1: timestamp1,
+       mile2: mile2,
+       timestamp2: timestamp2,
+       speed: speed
+     }}
+  end
+
+  defp do_decode(<<65>>, _acc) do
+    {:error, %Heartbeat{}}
+  end
+
+  defp do_decode(<<16, length::unsigned-integer-8, msg::binary-size(length)>>, _acc) do
+    {:error, %Error{message: msg}}
+  end
+
   defp do_decode(<<129, _::binary>> = request, acc) do
-    {acc, request}
+    {:ok, {acc, request}}
   end
 
   defp do_decode(binary, acc) do
-    {acc, binary}
+    {:ok, {acc, binary}}
   end
 end

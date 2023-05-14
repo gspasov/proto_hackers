@@ -2,6 +2,7 @@ defmodule ProtoHackers.SpeedDaemon do
   use FunServer
   use TypedStruct
 
+  alias WarmFuzzyThing.Either
   alias ProtoHackers.SpeedDaemon.Request.Error
   alias ProtoHackers.TcpServer
   alias ProtoHackers.SpeedDaemon.OverWatch
@@ -45,19 +46,18 @@ defmodule ProtoHackers.SpeedDaemon do
 
   @impl true
   def on_tcp_connect(socket) do
-    case DynamicSupervisor.start_child(dynamic_supervisor_name(), {__MODULE__, socket}) do
-      {:ok, _} ->
-        Logger.debug("[#{__MODULE__}] New Client Connection #{inspect(socket)}")
+    dynamic_supervisor_name()
+    |> DynamicSupervisor.start_child({__MODULE__, socket})
+    |> Either.on_left(fn reason ->
+      Logger.error("[#{__MODULE__}] Stopping client #{inspect(socket)} with #{inspect(reason)}")
 
-      {:error, reason} ->
-        Logger.error("[#{__MODULE__}] Stopping client #{inspect(socket)} with #{inspect(reason)}")
-
-        TcpServer.close(socket)
-    end
+      TcpServer.close(socket)
+    end)
   end
 
   @impl true
   def on_tcp_receive(socket, packet) do
+    Logger.debug("[#{__MODULE__}] Received packet #{inspect(packet)}")
     {:ok, pid} = Utils.maybe_session_pid(socket, registry_name())
     handle_packet(pid, packet)
   end
@@ -84,18 +84,29 @@ defmodule ProtoHackers.SpeedDaemon do
   end
 
   def handle_packet(server, packet) do
-    FunServer.async(server, fn %State{packet: leftover_packet} = state ->
+    FunServer.async(server, fn %State{packet: leftover_packet, tcp_socket: socket} = state ->
       new_leftover_packet =
         case Request.decode(leftover_packet <> packet) do
-          {[], new_leftover} ->
+          {:ok, {[], new_leftover}} ->
             new_leftover
 
-          {requests, new_leftover} ->
+          {:ok, {requests, new_leftover}} ->
             Enum.each(requests, fn request ->
+              Logger.debug("[#{__MODULE__}] Incoming request: #{inspect(request)}")
               handle_request(server, request)
             end)
 
             new_leftover
+
+          {:error, request} ->
+            TcpServer.send(
+              socket,
+              Request.encode(%Error{
+                message: "Cannot send Sever type requests got #{inspect(request)}"
+              })
+            )
+
+            <<>>
         end
 
       {:noreply, %{state | packet: new_leftover_packet}}

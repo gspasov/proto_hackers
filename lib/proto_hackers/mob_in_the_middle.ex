@@ -1,4 +1,6 @@
 defmodule ProtoHackers.MobInTheMiddle do
+  @moduledoc false
+
   use FunServer
 
   alias ProtoHackers.TcpServer
@@ -8,7 +10,7 @@ defmodule ProtoHackers.MobInTheMiddle do
   require Logger
 
   @server_host 'chat.protohackers.com'
-  @server_port 16963
+  @server_port 16_963
   @tony_boguscoin_address "7YWHMfk9JZe0LM0g1ZauHuiSxhI"
 
   def dynamic_supervisor_name, do: DynamicSupervisor.MobInTheMiddle

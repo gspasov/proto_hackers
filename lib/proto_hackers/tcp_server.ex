@@ -123,15 +123,11 @@ defmodule ProtoHackers.TcpServer do
       ) do
     case :gen_tcp.recv(socket, receive_length) do
       {:ok, packet} ->
-        Logger.debug(
-          "[#{__MODULE__}] Connection #{inspect(socket)} received packet #{inspect(packet, limit: :infinity)}"
-        )
-
         on_tcp_receive.(socket, packet)
         handle_client(args)
 
       {:error, :timeout} ->
-        Logger.debug("[#{__MODULE__}] Connection #{inspect(socket)} timed out")
+        Logger.warn("[#{__MODULE__}] Connection #{inspect(socket)} timed out")
 
         handle_client(args)
 

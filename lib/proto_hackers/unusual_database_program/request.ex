@@ -1,4 +1,6 @@
 defmodule ProtoHackers.UnusualDatabaseProgram.Request do
+  @moduledoc false
+
   use TypedStruct
 
   typedstruct module: Insert do

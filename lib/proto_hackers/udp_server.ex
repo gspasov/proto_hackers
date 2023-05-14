@@ -1,4 +1,8 @@
 defmodule ProtoHackers.UdpServer do
+  @moduledoc """
+  Generic Udp Server
+  """
+
   use FunServer
   use TypedStruct
 

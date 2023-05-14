@@ -1,4 +1,6 @@
 defmodule ProtoHackers.UnusualDatabaseProgram.Supervisor do
+  @moduledoc false
+
   use Supervisor
 
   alias ProtoHackers.UnusualDatabaseProgram

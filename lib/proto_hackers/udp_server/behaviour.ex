@@ -3,5 +3,5 @@ defmodule ProtoHackers.UdpServer.Behaviour do
   Callbacks for all UdpServer implementers
   """
 
-  @callback on_udp_receive(socket :: :gen_udp.socket(), packet :: any()) :: :ok
+  @callback on_udp_receive(socket :: :gen_udp.socket(), packet :: any()) :: any()
 end

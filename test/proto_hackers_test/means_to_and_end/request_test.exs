@@ -1,4 +1,4 @@
-defmodule ProtoHackersTest.MeansToAnEndTest.RequestTest do
+defmodule ProtoHackersTest.MeansToAnEnd.RequestTest do
   use ExUnit.Case, async: true
 
   alias ProtoHackers.MeansToAnEnd.Request

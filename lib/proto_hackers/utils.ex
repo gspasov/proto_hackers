@@ -1,5 +1,6 @@
 defmodule ProtoHackers.Utils do
   @moduledoc false
+  alias WarmFuzzyThing.Maybe
 
   @spec prime?(number :: integer()) :: boolean()
   def prime?(num)
@@ -24,4 +25,10 @@ defmodule ProtoHackers.Utils do
       [{pid, _}] -> {:ok, pid}
     end
   end
+
+  @spec maybe_hd([elem]) :: Maybe.pure(elem) when elem: any()
+  def maybe_hd(list)
+
+  def maybe_hd([]), do: nil
+  def maybe_hd([elem | _]), do: Maybe.pure(elem)
 end

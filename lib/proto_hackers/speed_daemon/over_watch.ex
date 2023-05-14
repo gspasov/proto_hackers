@@ -8,6 +8,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
   use FunServer
   use TypedStruct
 
+  alias ProtoHackers.Utils
   alias ProtoHackers.SpeedDaemon
   alias ProtoHackers.SpeedDaemon.OverWatch
   alias ProtoHackers.SpeedDaemon.OverWatch.State
@@ -24,7 +25,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   @type day :: non_neg_integer()
   @type violations :: %{{SpeedDaemon.road(), SpeedDaemon.plate()} => Violation.t()}
-  @type snapshots :: %{{SpeedDaemon.road(), SpeedDaemon.plate()} => Snapshot.t()}
+  @type observations :: %{{SpeedDaemon.road(), SpeedDaemon.plate()} => [Snapshot.t()]}
 
   @day_length 86_400
   @seconds_in_an_hour 3600
@@ -43,7 +44,7 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
 
   typedstruct module: State do
     field :dispatcher_clients, %{SpeedDaemon.road() => [pid()]}, default: %{}
-    field :snapshots, OverWatch.snapshots(), default: %{}
+    field :observations, OverWatch.observations(), default: %{}
     field :violations, OverWatch.violations(), default: %{}
   end
 
@@ -121,25 +122,28 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
            plate: %Plate{plate: plate_text}
          } = new_snapshot},
         %State{
-          snapshots: snapshots,
+          observations: observations,
           violations: violations,
           dispatcher_clients: dispatcher_clients
         } = state
       ) do
     Logger.debug("[#{__MODULE__}] New snapshot #{inspect(new_snapshot)}")
 
-    {new_snapshots, new_violations} =
-      case Map.get(snapshots, {road, plate_text}) do
+    {new_observations, new_violations} =
+      case Map.get(observations, {road, plate_text}) do
         nil ->
-          new_snapshots = Map.put(snapshots, {road, plate_text}, new_snapshot)
+          new_snapshots = Map.put(observations, {road, plate_text}, [new_snapshot])
           {new_snapshots, violations}
 
-        old_snapshot ->
-          {earlier_snapshot, later_snapshot} = order_snapshots(old_snapshot, new_snapshot)
-
+        stored_snapshots ->
           new_violations =
-            earlier_snapshot
-            |> maybe_violation(later_snapshot, violations)
+            stored_snapshots
+            |> Enum.map(fn old_snapshot ->
+              [first, second] = order_snapshots([new_snapshot, old_snapshot])
+              maybe_violation(first, second, violations)
+            end)
+            |> Enum.reject(&Kernel.is_nil/1)
+            |> Utils.maybe_hd()
             |> Maybe.fmap(fn %Violation{ticket: ticket} = violation ->
               # If there is available Dispatcher, broadcast the Ticket to one Dispatcher.
               # Otherwise just store the Ticket as 'generated'.
@@ -172,11 +176,17 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
               )
             end)
 
-          new_snapshots = Map.put(snapshots, {road, plate_text}, later_snapshot)
-          {new_snapshots, new_violations}
+          new_observations =
+            Map.put(
+              observations,
+              {road, plate_text},
+              order_snapshots([new_snapshot | stored_snapshots])
+            )
+
+          {new_observations, new_violations}
       end
 
-    {:noreply, %State{state | snapshots: new_snapshots, violations: new_violations}}
+    {:noreply, %State{state | observations: new_observations, violations: new_violations}}
   end
 
   @impl true
@@ -233,18 +243,14 @@ defmodule ProtoHackers.SpeedDaemon.OverWatch do
     end
   end
 
-  @spec order_snapshots(Snapshot.t(), Snapshot.t()) :: {Snapshot.t(), Snapshot.t()}
-  defp order_snapshots(snapshot1, snapshot2)
-
-  defp order_snapshots(
-         %Snapshot{plate: %Plate{timestamp: timestamp1}} = snapshot1,
-         %Snapshot{plate: %Plate{timestamp: timestamp2}} = snapshot2
-       )
-       when timestamp1 > timestamp2 do
-    {snapshot2, snapshot1}
+  @spec order_snapshots([Snapshot.t()]) :: [Snapshot.t()]
+  defp order_snapshots(snapshots) do
+    Enum.sort_by(
+      snapshots,
+      fn %Snapshot{plate: %Plate{timestamp: timestamp}} -> timestamp end,
+      :asc
+    )
   end
-
-  defp order_snapshots(snapshot1, snapshot2), do: {snapshot1, snapshot2}
 
   defp speeding?(speed, limit), do: speed - limit * 100 > @allowed_mph_overhead
 

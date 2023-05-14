@@ -26,7 +26,7 @@ defmodule ProtoHackers.Utils do
     end
   end
 
-  @spec maybe_hd([elem]) :: Maybe.pure(elem) when elem: any()
+  @spec maybe_hd([elem]) :: Maybe.t(elem) when elem: any()
   def maybe_hd(list)
 
   def maybe_hd([]), do: nil
